@@ -79,7 +79,7 @@ func TestGetAppliedMigrationsErrorsWhenNoneExist(t *testing.T) {
 
 func TestApplyWithNilDBProvidesHelpfulError(t *testing.T) {
 	err := NewMigrator().Apply(nil, []*Migration{
-		&Migration{
+		{
 			ID:     "2019-01-01 Test",
 			Script: "CREATE TABLE fake_table (id INTEGER)",
 		},
@@ -93,7 +93,7 @@ func TestFailedMigration(t *testing.T) {
 	tableName := time.Now().Format(time.RFC3339Nano)
 	migrator := NewMigrator(WithTableName(tableName))
 	migrations := []*Migration{
-		&Migration{
+		{
 			ID:     "2019-01-01 Bad Migration",
 			Script: "CREATE TIBBLE bad_table_name (id INTEGER NOT NULL PRIMARY KEY)",
 		},
@@ -116,11 +116,11 @@ func TestMigrationsAppliedLexicalOrderByID(t *testing.T) {
 	tableName := time.Now().Format(time.RFC3339Nano)
 	migrator := NewMigrator(WithDialect(Postgres), WithTableName(tableName))
 	outOfOrderMigrations := []*Migration{
-		&Migration{
+		{
 			ID:     "2019-01-01 999 Should Run Last",
 			Script: "CREATE TABLE last_table (id INTEGER NOT NULL);",
 		},
-		&Migration{
+		{
 			ID:     "2019-01-01 001 Should Run First",
 			Script: "CREATE TABLE first_table (id INTEGER NOT NULL);",
 		},

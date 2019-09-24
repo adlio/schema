@@ -40,7 +40,7 @@ func TestPostgres11MultiStatementMigrations(t *testing.T) {
 	migrator := NewMigrator(WithDialect(Postgres), WithTableName(tableName))
 
 	migrationSet1 := []*Migration{
-		&Migration{
+		{
 			ID: "2019-09-23 Create Artists and Albums",
 			Script: `
 		CREATE TABLE artists (
@@ -63,7 +63,7 @@ func TestPostgres11MultiStatementMigrations(t *testing.T) {
 
 	secondMigratorWithPublicSchema := NewMigrator(WithDialect(Postgres), WithTableName("public", tableName))
 	migrationSet2 := []*Migration{
-		&Migration{
+		{
 			ID: "2019-09-24 Create Tracks",
 			Script: `
 		CREATE TABLE tracks (
