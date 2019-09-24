@@ -3,10 +3,15 @@
 A package for tracking and application modifications to your Go application's
 primary database schema.
 
+[![Build Status](https://travis-ci.org/adlio/schema.svg?branch=master)](https://travis-ci.org/adlio/schema)
+[![Go Report Card](https://goreportcard.com/badge/github.com/adlio/schema)](https://goreportcard.com/report/github.com/adlio/schema)
+[![codecov](https://codecov.io/gh/adlio/schema/branch/master/graph/badge.svg)](https://codecov.io/gh/adlio/schema)
+[![GoDoc](https://godoc.org/github.com/adlio/schema?status.svg)](https://godoc.org/github.com/adlio/schema)
+
 ## Package Opinions
 
 There are many other schema migration tools. This one exists because of a
-particular set of opinions
+particular set of opinions:
 
 1. Database credentials are runtime configuration details, but database
 schema is a build-time applicaton dependency, which means it should be
@@ -16,7 +21,11 @@ complicates testing and deployment.
 3. Sequentially-numbered migration IDs will create too many unnecessary
 schema collisions on a distributed, asynchronously-communicating team.
 4. SQL is the best language to use to specify changes to SQL schemas.
-5. You shouldn't introduce an ORM for handling database schema changes.
+5. Deep dependency chains should be avoided, and we don't want to import
+an ORM into our binaries just to get SQL migration features. The
+`schema` package imports only
+[standard library packages](https://godoc.org/github.com/adlio/schema?imports)
+(**NOTE** *We do import `ory/dockertest` in our tests).
 
 ## Supported Databases
 
