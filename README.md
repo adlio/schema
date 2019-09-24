@@ -1,7 +1,7 @@
 # Schema - Embedded Database Migration Library for Go
 
-A package for tracking and application modifications to your Go application's
-primary database schema.
+An opinionated, embeddable library for tracking and application modifications
+to your Go application's database schema.
 
 [![Build Status](https://travis-ci.org/adlio/schema.svg?branch=master)](https://travis-ci.org/adlio/schema)
 [![Go Report Card](https://goreportcard.com/badge/github.com/adlio/schema)](https://goreportcard.com/report/github.com/adlio/schema)
@@ -14,29 +14,51 @@ There are many other schema migration tools. This one exists because of a
 particular set of opinions:
 
 1. Database credentials are runtime configuration details, but database
-schema is a build-time applicaton dependency, which means it should be
-"compiled in" to the build.
+schema is a **build-time applicaton dependency**, which means it should be
+"compiled in" to the build, and should not rely on external tools.
 2. Using an external command-line tool for schema migrations needlessly
 complicates testing and deployment.
-3. Sequentially-numbered migration IDs will create too many unnecessary
+3. Sequentially-numbered integer migration IDs will create too many unnecessary
 schema collisions on a distributed, asynchronously-communicating team.
 4. SQL is the best language to use to specify changes to SQL schemas.
-5. Deep dependency chains should be avoided, and we don't want to import
-an ORM into our binaries just to get SQL migration features. The
-`schema` package imports only
+5. "Down" migrations add needless complication, aren't often used, and are
+tedious to properly test when they are used. In the unlikely event you need
+to migrate backwards, it's possible to write the "rollback" migration as
+a separate "up" migration.
+6. Deep dependency chains should be avoided, especially in a compiled
+binary. We don't want to import an ORM into our binaries just to get SQL
+the features of this package. The `schema` package imports only
 [standard library packages](https://godoc.org/github.com/adlio/schema?imports)
 (**NOTE** *We do import `ory/dockertest` in our tests).
+7. Storing raw SQL as strings inside `.go` files is an acceptable trade-off
+for the above. (For users who depend on `.sql` files, bolt-on integrations
+of go-bindata, go-rice or similar binary embedders are possible).
 
 ## Supported Databases
 
-This package was extracted from a Postgres project, so that's all that's
+This package was extracted from a PostgreSQL project, so that's all that's
 tested at the moment, but all the databases below should be easy to add
-with a [contribution](#contributions)
+with a [contribution](#contributions):
 
-- [x] Postgres
+- [x] PostgreSQL
 - [ ] MySQL (open a Pull Request)
 - [ ] SQLite (open a Pull Request)
 - [ ] SQL Server (open a Pull Request)
+
+## Roadmap
+
+- [x] Basic feature set for PostgreSQL
+- [x] Continuous integration tests / Code coverage
+- [x] Basic Documentation: basic overview, usage documentation
+- [ ] Add a validation pass inside `Apply()` to throw an error when checksums or
+      IDs of previously-run migrations appear to have been changed or when
+      problematic migration IDs are being used.
+- [ ] Enhancements to facilitate asset embedding tools like
+  [go-rice](https://github.com/GeertJohan/go.rice) or
+  [packr](https://github.com/gobuffalo/packr) to get syntax highlighting for
+  external `.sql` files which are embedded only at build time (or clear
+  documentation to explain how they can be used without changing `schema`).
+- [ ] Support for additional databases.
 
 ## Usage Instructions
 
@@ -59,6 +81,13 @@ then call its `Apply()` method with your database connection and a slice of
       }
     })
 
+The `.Apply()` function figures out which of the supplied Migrations have not
+yet been executed in the database (based on the ID), and executes the `Script`
+for each in **alphabetical order by ID**. This procedure means its OK to call
+`.Apply()` on the same Migrator with a different set of Migrations each time
+(which you might do if you want to avoid the ugliness of one giant migrations.go
+file with hundreds of lines of embedded SQL in it).
+
 The `NewMigrator()` function accepts option arguments to customize the dialect
 and the name of the migration tracking table. By default, the tracking table
 will be set to `schema.DefaultTableName` (`schema_migrations`). To change it
@@ -68,7 +97,7 @@ to `my_migrations`:
 migrator := schema.NewMigrator(WithTableName("my_migrations"))
 ```
 
-It is theoretically possible to create multiple `Migrator`s and to use mutliple
+It is theoretically possible to create multiple Migrators and to use mutliple
 migration tracking tables within the same application and database.
 
 It is also OK for multiple processes to run `Apply` on identically configured
@@ -106,3 +135,7 @@ have been successfully applied.
 ... are welcome. Please include tests with your contribution. We've integrated
 [dockertest](https://github.com/ory/dockertest) to automate the process of
 creating clean test databases.
+
+Before contributing, please read the [package opinions](#package-opinions)
+section. If your contribution is in disagreement with those opinions, then
+there's a good chance a different schema migration tool is more appropriate.
