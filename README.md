@@ -3,7 +3,7 @@
 A package for tracking and application modifications to your Go application's
 primary database schema.
 
-## Package Opionions
+## Package Opinions
 
 There are many other schema migration tools. This one exists because of a
 particular set of opinions
