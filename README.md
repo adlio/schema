@@ -94,7 +94,7 @@ will be set to `schema.DefaultTableName` (`schema_migrations`). To change it
 to `my_migrations`:
 
 ```go
-migrator := schema.NewMigrator(WithTableName("my_migrations"))
+migrator := schema.NewMigrator(schema.WithTableName("my_migrations"))
 ```
 
 It is theoretically possible to create multiple Migrators and to use mutliple
