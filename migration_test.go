@@ -24,7 +24,7 @@ func TestMigrationFromFile(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if migration.ID != "2019-01-01 09:00 Create Users" {
+	if migration.ID != "2019-01-01 0900 Create Users" {
 		t.Errorf("Incorrect ID: %s", migration.ID)
 	}
 	if migration.Script != "CREATE TABLE users (id INTEGER NOT NULL PRIMARY KEY);" {
