@@ -4,7 +4,6 @@ import (
 	"crypto/md5"
 	"database/sql"
 	"fmt"
-	"sort"
 	"time"
 )
 
@@ -60,10 +59,7 @@ func (m Migrator) Apply(db *sql.DB, migrations []*Migration) error {
 			}
 		}
 
-		// Adjust execution order so that we apply by ID
-		sort.Slice(plan, func(i, j int) bool {
-			return plan[i].ID < plan[j].ID
-		})
+		SortMigrations(plan)
 
 		for _, migration := range plan {
 			err = m.runMigration(tx, migration)
