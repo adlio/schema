@@ -45,3 +45,13 @@ func TestMigrationsFromDirectoryPath(t *testing.T) {
 		t.Errorf("Incorrect ID: %s", migrations[1].ID)
 	}
 }
+
+func TestMigrationsFromDirectoryPathThrowsErrorForInvalidDirectory(t *testing.T) {
+	migrations, err := MigrationsFromDirectoryPath("/a/totally/made/up/directory/path")
+	if err != nil {
+		t.Error("Expected an error trying to load migrations from a fake directory")
+	}
+	if len(migrations) > 0 {
+		t.Errorf("Expected an empty list of migrations. Got %d", len(migrations))
+	}
+}

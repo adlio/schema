@@ -20,6 +20,9 @@ func MigrationIDFromFilename(filename string) string {
 func MigrationsFromDirectoryPath(dirPath string) (migrations []*Migration, err error) {
 	migrations = make([]*Migration, 0)
 	filenames, err := filepath.Glob(path.Join(dirPath, "*.sql"))
+	if err != nil {
+		return migrations, err
+	}
 	for _, filename := range filenames {
 		content, err := ioutil.ReadFile(filename)
 		if err != nil {
