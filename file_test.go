@@ -48,7 +48,7 @@ func TestMigrationsFromDirectoryPath(t *testing.T) {
 
 func TestMigrationsFromDirectoryPathThrowsErrorForInvalidDirectory(t *testing.T) {
 	migrations, err := MigrationsFromDirectoryPath("/a/totally/made/up/directory/path")
-	if err != nil {
+	if err == nil {
 		t.Error("Expected an error trying to load migrations from a fake directory")
 	}
 	if len(migrations) > 0 {

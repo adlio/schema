@@ -3,6 +3,7 @@ package schema
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -19,10 +20,17 @@ func MigrationIDFromFilename(filename string) string {
 // contents of the directory. Only .sql files are read
 func MigrationsFromDirectoryPath(dirPath string) (migrations []*Migration, err error) {
 	migrations = make([]*Migration, 0)
+
+	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
+		err = fmt.Errorf("Directory '%s' does not exist", dirPath)
+		return migrations, err
+	}
+
 	filenames, err := filepath.Glob(path.Join(dirPath, "*.sql"))
 	if err != nil {
 		return migrations, err
 	}
+
 	for _, filename := range filenames {
 		content, err := ioutil.ReadFile(filename)
 		if err != nil {
