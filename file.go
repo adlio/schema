@@ -21,20 +21,26 @@ func MigrationIDFromFilename(filename string) string {
 func MigrationsFromDirectoryPath(dirPath string) (migrations []*Migration, err error) {
 	migrations = make([]*Migration, 0)
 
-	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
+	dirPath, err = filepath.Abs(dirPath)
+	if err != nil {
+		return
+	}
+
+	if _, err = os.Stat(dirPath); os.IsNotExist(err) {
 		err = fmt.Errorf("Directory '%s' does not exist", dirPath)
-		return migrations, err
+		return
 	}
 
 	filenames, err := filepath.Glob(path.Join(dirPath, "*.sql"))
 	if err != nil {
-		return migrations, err
+		return
 	}
 
 	for _, filename := range filenames {
-		content, err := ioutil.ReadFile(filename)
+		var content []byte
+		content, err = ioutil.ReadFile(filename)
 		if err != nil {
-			return migrations, err
+			return
 		}
 		migration := &Migration{
 			ID:     MigrationIDFromFilename(filename),
