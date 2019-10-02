@@ -20,12 +20,13 @@ func (p postgresDialect) LockSQL(tableName string) string {
 // returns the SQL statement needed to create it
 func (p postgresDialect) CreateSQL(tableName string) string {
 	return fmt.Sprintf(`
+				SELECT pg_advisory_xact_lock(2482182);
 				CREATE TABLE IF NOT EXISTS %s (
 					id VARCHAR(255) NOT NULL,
 					checksum VARCHAR(32) NOT NULL DEFAULT '',
 					execution_time_in_millis INTEGER NOT NULL DEFAULT 0,
 					applied_at TIMESTAMP WITH TIME ZONE NOT NULL
-				)
+				);
 			`, tableName)
 }
 

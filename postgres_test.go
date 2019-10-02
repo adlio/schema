@@ -1,7 +1,9 @@
 package schema
 
 import (
+	"database/sql"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -20,6 +22,36 @@ func TestPostgresLockSQL(t *testing.T) {
 		t.Errorf("Expected table name in quoted form:\n%s", sql)
 	}
 }
+
+func TestPostgresSimultaneousCreateTable(t *testing.T) {
+	tableNames := []string{
+		"firstMigrations",
+		"otherMigrations",
+		"seeds",
+		"otherSeeds",
+	}
+	migrators := make([]Migrator, len(tableNames))
+	for i, table := range tableNames {
+		migrators[i] = NewMigrator(WithDialect(Postgres), WithTableName(table))
+	}
+	wg := &sync.WaitGroup{}
+	for _, migrator := range migrators {
+		wg.Add(3)
+		go runCreateMigrationsTable(t, wg, migrator, postgres11DB)
+		go runCreateMigrationsTable(t, wg, migrator, postgres11DB)
+		go runCreateMigrationsTable(t, wg, migrator, postgres11DB)
+	}
+	wg.Wait()
+}
+
+func runCreateMigrationsTable(t *testing.T, wg *sync.WaitGroup, migrator Migrator, db *sql.DB) {
+	err := migrator.createMigrationsTable(db)
+	if err != nil {
+		t.Error(err)
+	}
+	wg.Done()
+}
+
 func TestPostgres11CreateMigrationsTable(t *testing.T) {
 	migrator := NewMigrator(WithDialect(Postgres))
 	err := migrator.createMigrationsTable(postgres11DB)
