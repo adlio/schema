@@ -5,6 +5,29 @@ import (
 	"testing"
 )
 
+func TestMigrationIDFromFilename(t *testing.T) {
+	const (
+		sampleID = "2019-01-01 0900 Create Users"
+	)
+	tests := []struct {
+		path string
+		want string
+		name string
+	}{
+		{"c:\\db\\migrations\\"+sampleID+".sql", sampleID, "Windows Path"},
+		{"\\\\server\\db\\migrations\\"+sampleID+".sql", sampleID, "Windows UNC Path"},
+		{"/db/migrations/"+sampleID+".sql", "2019-01-01 0900 Create Users", "Linux Path"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := MigrationIDFromFilename(test.path)
+			if got != test.want {
+				t.Errorf("%s ID Error, want \"%s\", got \"%s\"", test.name, test.want, got)
+			}
+		})
+	}
+}
+
 func TestMigrationFromFilePath(t *testing.T) {
 	migration, err := MigrationFromFilePath("./example-migrations/2019-01-01 0900 Create Users.sql")
 	if migration.Script != "CREATE TABLE users (id INTEGER NOT NULL PRIMARY KEY);" {

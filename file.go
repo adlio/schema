@@ -3,7 +3,6 @@ package schema
 import (
 	"fmt"
 	"io/ioutil"
-	"path"
 	"path/filepath"
 	"strings"
 )
@@ -12,14 +11,14 @@ import (
 // from the filename to make a friendlier Migration ID
 //
 func MigrationIDFromFilename(filename string) string {
-	return strings.TrimSuffix(path.Base(filename), path.Ext(filename))
+	return strings.TrimSuffix(filepath.Base(filename), filepath.Ext(filename))
 }
 
 // MigrationsFromDirectoryPath retrieves a slice of Migrations from the
 // contents of the directory. Only .sql files are read
 func MigrationsFromDirectoryPath(dirPath string) (migrations []*Migration, err error) {
 	migrations = make([]*Migration, 0)
-	filenames, err := filepath.Glob(path.Join(dirPath, "*.sql"))
+	filenames, err := filepath.Glob(filepath.Join(dirPath, "*.sql"))
 	if err != nil {
 		return migrations, err
 	}
