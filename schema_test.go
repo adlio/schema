@@ -39,7 +39,10 @@ func TestMain(m *testing.M) {
 	}
 
 	// Prevents containers from accumulating due to failed test runs
-	resource.Expire(60)
+	err = resource.Expire(60)
+	if err != nil {
+		log.Fatalf("Could not set expiration time for docker test containers: %s", err)
+	}
 
 	if err = pool.Retry(func() error {
 		var err error
@@ -103,10 +106,10 @@ func TestFailedMigration(t *testing.T) {
 		t.Errorf("Expected explanatory error from failed migration. Got %v", err)
 	}
 	rows, err := postgres11DB.Query("SELECT * FROM " + migrator.QuotedTableName())
-	defer rows.Close()
 	if err != nil {
 		t.Error(err)
 	}
+	defer rows.Close()
 	if rows.Next() {
 		t.Error("Record was inserted in tracking table even though the migration failed")
 	}
