@@ -100,7 +100,7 @@ func (m Migrator) runMigration(tx *sql.Tx, migration *Migration) error {
 
 	executionTime := time.Since(startedAt)
 	if m.Logger != nil {
-		m.Logger.Print("Migration '%s' applied in %s\n", migration.ID, executionTime)
+		m.Logger.Print(fmt.Sprintf("Migration '%s' applied in %s\n", migration.ID, executionTime))
 	}
 
 	checksum = fmt.Sprintf("%x", md5.Sum([]byte(migration.Script)))
