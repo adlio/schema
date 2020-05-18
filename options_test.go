@@ -1,6 +1,8 @@
 package schema
 
 import (
+	"log"
+	"os"
 	"testing"
 )
 
@@ -55,5 +57,16 @@ func TestWithDialectOption(t *testing.T) {
 	}
 	if m.Dialect != nil {
 		t.Errorf("Expected Option to not modify the original Migrator's Dialect, but it changed it to '%v'.", m.Dialect)
+	}
+}
+
+func TestWithLoggerOption(t *testing.T) {
+	m := Migrator{}
+	if m.Logger != nil {
+		t.Errorf("Expected nil Logger by default. Got '%v'", m.Logger)
+	}
+	modifiedMigrator := WithLogger(log.New(os.Stdout, "schema: ", log.Ldate|log.Ltime))(m)
+	if modifiedMigrator.Logger == nil {
+		t.Errorf("Expected logger to have been added")
 	}
 }

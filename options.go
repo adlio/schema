@@ -36,3 +36,20 @@ func WithDialect(dialect Dialect) Option {
 		return m
 	}
 }
+
+// Logger is the interface for logging operations of the logger.
+// By default the migrator operates silently. Providing a Logger
+// enables output of the migrator's operations.
+type Logger interface {
+	Print(...interface{})
+}
+
+// WithLogger builds an Option which will set the supplied Logger
+// on a Migrator. Usage: NewMigrator(WithLogger(logrus.New()))
+//
+func WithLogger(logger Logger) Option {
+	return func(m Migrator) Migrator {
+		m.Logger = logger
+		return m
+	}
+}

@@ -14,6 +14,7 @@ type Migrator struct {
 	SchemaName string
 	TableName  string
 	Dialect    Dialect
+	Logger     Logger
 }
 
 // NewMigrator creates a new Migrator with the supplied
@@ -96,14 +97,18 @@ func (m Migrator) runMigration(tx *sql.Tx, migration *Migration) error {
 	if err != nil {
 		return fmt.Errorf("Migration '%s' Failed:\n%w", migration.ID, err)
 	}
-	executionTimeInMillis := time.Since(startedAt).Milliseconds()
+
+	executionTime := time.Since(startedAt)
+	if m.Logger != nil {
+		m.Logger.Print("Migration '%s' applied in %s\n", migration.ID, executionTime)
+	}
 
 	checksum = fmt.Sprintf("%x", md5.Sum([]byte(migration.Script)))
 	_, err = tx.Exec(
 		m.Dialect.InsertSQL(m.QuotedTableName()),
 		migration.ID,
 		checksum,
-		executionTimeInMillis,
+		executionTime.Milliseconds(),
 		startedAt,
 	)
 	return err
