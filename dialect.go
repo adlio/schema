@@ -8,6 +8,7 @@ package schema
 type Dialect interface {
 	QuotedTableName(schemaName, tableName string) string
 	LockSQL(tableName string) string
+	UnlockSQL(tableName string) string
 	CreateSQL(tableName string) string
 	SelectSQL(tableName string) string
 	InsertSQL(tableName string) string

@@ -4,12 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"sync"
 )
-
-// A global mutex to prevent simultaneous
-// migrations
-var mutex = &sync.Mutex{}
 
 // DefaultTableName defines the name of the database table which will
 // hold the status of applied migrations

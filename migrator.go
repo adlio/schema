@@ -33,16 +33,17 @@ func NewMigrator(options ...Option) Migrator {
 // Apply takes a slice of Migrations and applies any which have not yet
 // been applied
 func (m Migrator) Apply(db *sql.DB, migrations []*Migration) error {
-
-	mutex.Lock()
-	defer mutex.Unlock()
-
-	err := m.createMigrationsTable(db)
+	err := m.lock(db)
 	if err != nil {
 		return err
 	}
 
-	return transaction(db, func(tx *sql.Tx) error {
+	err = m.createMigrationsTable(db)
+	if err != nil {
+		return err
+	}
+
+	err = transaction(db, func(tx *sql.Tx) error {
 		_, err := tx.Exec(m.Dialect.LockSQL(m.QuotedTableName()))
 		if err != nil {
 			return err
@@ -71,6 +72,9 @@ func (m Migrator) Apply(db *sql.DB, migrations []*Migration) error {
 
 		return nil
 	})
+
+	_ = m.unlock(db)
+	return err
 }
 
 // QuotedTableName returns the dialect-quoted fully-qualified name for the
@@ -84,6 +88,22 @@ func (m Migrator) createMigrationsTable(db *sql.DB) (err error) {
 		_, err := tx.Exec(m.Dialect.CreateSQL(m.QuotedTableName()))
 		return err
 	})
+}
+
+func (m Migrator) lock(db *sql.DB) (err error) {
+	if db == nil {
+		return ErrNilDB
+	}
+	_, err = db.Exec(m.Dialect.LockSQL(m.TableName))
+	return err
+}
+
+func (m Migrator) unlock(db *sql.DB) (err error) {
+	if db == nil {
+		return ErrNilDB
+	}
+	_, err = db.Exec(m.Dialect.UnlockSQL(m.TableName))
+	return err
 }
 
 func (m Migrator) runMigration(tx *sql.Tx, migration *Migration) error {

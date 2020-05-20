@@ -2,8 +2,11 @@ package schema
 
 import (
 	"fmt"
+	"hash/crc32"
 	"strings"
 )
+
+const postgresAdvisoryLockSalt uint32 = 542384964
 
 // Postgres is the dialect for Postgres-compatible
 // databases
@@ -13,7 +16,13 @@ var Postgres = postgresDialect{}
 type postgresDialect struct{}
 
 func (p postgresDialect) LockSQL(tableName string) string {
-	return fmt.Sprintf("LOCK TABLE %s IN EXCLUSIVE MODE", tableName)
+	lockID := p.advisoryLockID(tableName)
+	return fmt.Sprintf(`SELECT pg_advisory_lock(%s)`, lockID)
+}
+
+func (p postgresDialect) UnlockSQL(tableName string) string {
+	lockID := p.advisoryLockID(tableName)
+	return fmt.Sprintf(`SELECT pg_advisory_unlock(%s)`, lockID)
 }
 
 // CreateSQL takes the name of the migration tracking table and
@@ -67,4 +76,11 @@ func (p postgresDialect) QuotedTableName(schemaName, tableName string) string {
 // quote character
 func (p postgresDialect) quotedIdent(ident string) string {
 	return `"` + strings.ReplaceAll(ident, `"`, "") + `"`
+}
+
+// advisoryLockID generates a table-specific lock name to use
+func (p postgresDialect) advisoryLockID(tableName string) string {
+	sum := crc32.ChecksumIEEE([]byte(tableName))
+	sum = sum * postgresAdvisoryLockSalt
+	return fmt.Sprint(sum)
 }

@@ -10,14 +10,8 @@ func TestPostgresLockSQL(t *testing.T) {
 	name := `"schema_migrations"`
 
 	sql := Postgres.LockSQL(name)
-	if !strings.Contains(strings.ToUpper(sql), "IN EXCLUSIVE MODE") {
-		t.Errorf("Expected LOCK TABLE statement to be in Exclusive Mode:\n%s", sql)
-	}
-	if !strings.HasPrefix(strings.ToUpper(sql), "LOCK TABLE") {
-		t.Errorf("Expected LOCK TABLE statement:\n%s", sql)
-	}
-	if !strings.Contains(sql, name) {
-		t.Errorf("Expected table name in quoted form:\n%s", sql)
+	if !strings.Contains(strings.ToLower(sql), "pg_advisory_lock") {
+		t.Errorf("EXPECTED pg_advisory_lock:\n%s", sql)
 	}
 }
 func TestPostgres11CreateMigrationsTable(t *testing.T) {
@@ -57,6 +51,11 @@ func TestPostgres11MultiStatementMigrations(t *testing.T) {
 		},
 	}
 	err := migrator.Apply(postgres11DB, migrationSet1)
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = migrator.Apply(postgres11DB, migrationSet1)
 	if err != nil {
 		t.Error(err)
 	}
