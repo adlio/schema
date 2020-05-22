@@ -3,7 +3,6 @@ package schema
 import (
 	"strings"
 	"testing"
-	"time"
 )
 
 func TestPostgresLockSQL(t *testing.T) {
@@ -31,8 +30,7 @@ func TestPostgres11CreateMigrationsTable(t *testing.T) {
 
 func TestPostgres11MultiStatementMigrations(t *testing.T) {
 	db := connectDB(t, "postgres11")
-	tableName := time.Now().Format(time.RFC3339Nano)
-	// tableName := "postgres_migrations"
+	tableName := "musicdatabase_migrations"
 	migrator := NewMigrator(WithDialect(Postgres), WithTableName(tableName))
 
 	migrationSet1 := []*Migration{

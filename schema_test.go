@@ -145,7 +145,7 @@ func TestFailedMigration(t *testing.T) {
 
 func TestMigrationsAppliedLexicalOrderByID(t *testing.T) {
 	db := connectDB(t, "postgres11")
-	tableName := time.Now().Format(time.RFC3339Nano)
+	tableName := "lexical_order_migrations"
 	migrator := NewMigrator(WithDialect(Postgres), WithTableName(tableName))
 	outOfOrderMigrations := []*Migration{
 		{
