@@ -95,6 +95,7 @@ func (m Migrator) lock(db *sql.DB) (err error) {
 		return ErrNilDB
 	}
 	_, err = db.Exec(m.Dialect.LockSQL(m.TableName))
+	m.log("Locked at ", time.Now().Format(time.RFC3339Nano))
 	return err
 }
 
@@ -103,6 +104,7 @@ func (m Migrator) unlock(db *sql.DB) (err error) {
 		return ErrNilDB
 	}
 	_, err = db.Exec(m.Dialect.UnlockSQL(m.TableName))
+	m.log("Unlocked at ", time.Now().Format(time.RFC3339Nano))
 	return err
 }
 
@@ -119,9 +121,7 @@ func (m Migrator) runMigration(tx *sql.Tx, migration *Migration) error {
 	}
 
 	executionTime := time.Since(startedAt)
-	if m.Logger != nil {
-		m.Logger.Print(fmt.Sprintf("Migration '%s' applied in %s\n", migration.ID, executionTime))
-	}
+	m.log(fmt.Sprintf("Migration '%s' applied in %s\n", migration.ID, executionTime))
 
 	checksum = fmt.Sprintf("%x", md5.Sum([]byte(migration.Script)))
 	_, err = tx.Exec(
@@ -132,4 +132,10 @@ func (m Migrator) runMigration(tx *sql.Tx, migration *Migration) error {
 		startedAt,
 	)
 	return err
+}
+
+func (m Migrator) log(msgs ...interface{}) {
+	if m.Logger != nil {
+		m.Logger.Print(msgs...)
+	}
 }
