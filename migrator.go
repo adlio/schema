@@ -44,11 +44,6 @@ func (m Migrator) Apply(db *sql.DB, migrations []*Migration) error {
 	}
 
 	err = transaction(db, func(tx *sql.Tx) error {
-		_, err := tx.Exec(m.Dialect.LockSQL(m.QuotedTableName()))
-		if err != nil {
-			return err
-		}
-
 		applied, err := m.GetAppliedMigrations(tx)
 		if err != nil {
 			return err
