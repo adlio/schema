@@ -16,7 +16,21 @@ import (
 	"github.com/ory/dockertest"
 )
 
-var postgres11DB *sql.DB
+type ConnInfo struct {
+	Driver     string
+	DockerRepo string
+	DockerTag  string
+	DSN        string
+	Resource   *dockertest.Resource
+}
+
+var DBConns map[string]*ConnInfo = map[string]*ConnInfo{
+	"postgres11": &ConnInfo{
+		Driver:     "postgres",
+		DockerRepo: "postgres",
+		DockerTag:  "11",
+	},
+}
 
 // TestMain replaces the normal test runner for this package. It connects to
 // Docker running on the local machine and launches testing database
@@ -29,49 +43,62 @@ func TestMain(m *testing.M) {
 		log.Fatalf("Can't run schema tests. Docker is not running: %s", err)
 	}
 
-	resource, err := pool.Run("postgres", "11", []string{
-		"POSTGRES_USER=postgres",
-		"POSTGRES_PASSWORD=secret",
-		"POSTGRES_DB=schematests",
-	})
-	if err != nil {
-		log.Fatalf("Could not start container: %s", err)
-	}
+	for _, info := range DBConns {
+		switch info.Driver {
+		case "postgres":
+			// Provision the container
+			info.Resource, err = pool.Run(info.DockerRepo, info.DockerTag, []string{
+				"POSTGRES_USER=postgres",
+				"POSTGRES_PASSWORD=secret",
+				"POSTGRES_DB=schematests",
+			})
+			if err != nil {
+				log.Fatalf("Could not start container %s:%s: %s", info.DockerRepo, info.DockerTag, err)
+			}
 
-	// Prevents containers from accumulating due to failed test runs
-	err = resource.Expire(60)
-	if err != nil {
-		log.Fatalf("Could not set expiration time for docker test containers: %s", err)
-	}
+			// Set the container to expire in a minute to avoid orphaned contianers
+			// hanging around
+			err = info.Resource.Expire(60)
+			if err != nil {
+				log.Fatalf("Could not set expiration time for docker test containers: %s", err)
+			}
 
-	if err = pool.Retry(func() error {
-		var err error
-		postgres11DB, err = sql.Open(
-			"postgres",
-			fmt.Sprintf("postgres://postgres:secret@localhost:%s/schematests?sslmode=disable", resource.GetPort("5432/tcp")),
-		)
-		if err != nil {
-			return err
+			// Save the DSN to make new connections later
+			info.DSN = fmt.Sprintf("postgres://postgres:secret@localhost:%s/schematests?sslmode=disable", info.Resource.GetPort("5432/tcp"))
+
+			// Wait for the database to come online
+			if err = pool.Retry(func() error {
+				testConn, err := sql.Open(info.Driver, info.DSN)
+				if err != nil {
+					return err
+				}
+				defer func() { _ = testConn.Close() }()
+				return testConn.Ping()
+			}); err != nil {
+				log.Fatalf("Could not connect to container: %s", err)
+				return
+			}
+
 		}
-		return postgres11DB.Ping()
-	}); err != nil {
-		log.Fatalf("Could not connect to container: %s", err)
-		return
 	}
 
 	code := m.Run()
 
+	// Purge all the containers we created
 	// You can't defer this because os.Exit doesn't execute defers
-	if err := pool.Purge(resource); err != nil {
-		log.Fatalf("Could not purge	resource: %s", err)
+	for _, info := range DBConns {
+		if err := pool.Purge(info.Resource); err != nil {
+			log.Fatalf("Could not purge	resource: %s", err)
+		}
 	}
 
 	os.Exit(code)
 }
 
 func TestGetAppliedMigrationsErrorsWhenNoneExist(t *testing.T) {
+	db := connectDB(t, "postgres11")
 	migrator := NewMigrator(WithTableName(time.Now().Format(time.RFC3339Nano)))
-	migrations, err := migrator.GetAppliedMigrations(postgres11DB)
+	migrations, err := migrator.GetAppliedMigrations(db)
 	if err == nil {
 		t.Error("Expected an error. Got none.")
 	}
@@ -93,6 +120,7 @@ func TestApplyWithNilDBProvidesHelpfulError(t *testing.T) {
 }
 
 func TestFailedMigration(t *testing.T) {
+	db := connectDB(t, "postgres11")
 	tableName := time.Now().Format(time.RFC3339Nano)
 	migrator := NewMigrator(WithTableName(tableName))
 	migrations := []*Migration{
@@ -101,21 +129,22 @@ func TestFailedMigration(t *testing.T) {
 			Script: "CREATE TIBBLE bad_table_name (id INTEGER NOT NULL PRIMARY KEY)",
 		},
 	}
-	err := migrator.Apply(postgres11DB, migrations)
+	err := migrator.Apply(db, migrations)
 	if err == nil || !strings.Contains(err.Error(), "TIBBLE") {
 		t.Errorf("Expected explanatory error from failed migration. Got %v", err)
 	}
-	rows, err := postgres11DB.Query("SELECT * FROM " + migrator.QuotedTableName())
+	rows, err := db.Query("SELECT * FROM " + migrator.QuotedTableName())
 	if err != nil {
 		t.Error(err)
 	}
-	defer rows.Close()
 	if rows.Next() {
 		t.Error("Record was inserted in tracking table even though the migration failed")
 	}
+	_ = rows.Close()
 }
 
 func TestMigrationsAppliedLexicalOrderByID(t *testing.T) {
+	db := connectDB(t, "postgres11")
 	tableName := time.Now().Format(time.RFC3339Nano)
 	migrator := NewMigrator(WithDialect(Postgres), WithTableName(tableName))
 	outOfOrderMigrations := []*Migration{
@@ -128,12 +157,12 @@ func TestMigrationsAppliedLexicalOrderByID(t *testing.T) {
 			Script: "CREATE TABLE first_table (id INTEGER NOT NULL);",
 		},
 	}
-	err := migrator.Apply(postgres11DB, outOfOrderMigrations)
+	err := migrator.Apply(db, outOfOrderMigrations)
 	if err != nil {
 		t.Error(err)
 	}
 
-	applied, err := migrator.GetAppliedMigrations(postgres11DB)
+	applied, err := migrator.GetAppliedMigrations(db)
 	if err != nil {
 		t.Error(err)
 	}
@@ -162,16 +191,29 @@ func TestMigrationsAppliedLexicalOrderByID(t *testing.T) {
 }
 
 func TestMigrationRecoversFromPanics(t *testing.T) {
-	err := transaction(postgres11DB, func(tx *sql.Tx) error {
+	db := connectDB(t, "postgres11")
+	err := transaction(db, func(tx *sql.Tx) error {
 		panic(errors.New("Panic Error"))
 	})
 	if err.Error() != "Panic Error" {
 		t.Errorf("Expected panic to be converted to error=Panic Error. Got %v", err)
 	}
-	err = transaction(postgres11DB, func(tx *sql.Tx) error {
+	err = transaction(db, func(tx *sql.Tx) error {
 		panic("Panic String")
 	})
 	if err.Error() != "Panic String" {
 		t.Errorf("Expected panic to be converted to error=Panic String. Got %v", err)
 	}
+}
+
+func connectDB(t *testing.T, name string) *sql.DB {
+	info, exists := DBConns[name]
+	if !exists {
+		t.Errorf("Database '%s' doesn't exist.", name)
+	}
+	db, err := sql.Open(info.Driver, info.DSN)
+	if err != nil {
+		t.Error(err)
+	}
+	return db
 }

@@ -15,20 +15,22 @@ func TestPostgresLockSQL(t *testing.T) {
 	}
 }
 func TestPostgres11CreateMigrationsTable(t *testing.T) {
+	db := connectDB(t, "postgres11")
 	migrator := NewMigrator(WithDialect(Postgres))
-	err := migrator.createMigrationsTable(postgres11DB)
+	err := migrator.createMigrationsTable(db)
 	if err != nil {
 		t.Errorf("Error occurred when creating migrations table: %s", err)
 	}
 
 	// Test that we can re-run it safely
-	err = migrator.createMigrationsTable(postgres11DB)
+	err = migrator.createMigrationsTable(db)
 	if err != nil {
 		t.Errorf("Calling createMigrationsTable a second time failed: %s", err)
 	}
 }
 
 func TestPostgres11MultiStatementMigrations(t *testing.T) {
+	db := connectDB(t, "postgres11")
 	tableName := time.Now().Format(time.RFC3339Nano)
 	// tableName := "postgres_migrations"
 	migrator := NewMigrator(WithDialect(Postgres), WithTableName(tableName))
@@ -50,12 +52,12 @@ func TestPostgres11MultiStatementMigrations(t *testing.T) {
 		`,
 		},
 	}
-	err := migrator.Apply(postgres11DB, migrationSet1)
+	err := migrator.Apply(db, migrationSet1)
 	if err != nil {
 		t.Error(err)
 	}
 
-	err = migrator.Apply(postgres11DB, migrationSet1)
+	err = migrator.Apply(db, migrationSet1)
 	if err != nil {
 		t.Error(err)
 	}
@@ -73,7 +75,7 @@ func TestPostgres11MultiStatementMigrations(t *testing.T) {
 		);`,
 		},
 	}
-	err = secondMigratorWithPublicSchema.Apply(postgres11DB, migrationSet2)
+	err = secondMigratorWithPublicSchema.Apply(db, migrationSet2)
 	if err != nil {
 		t.Error(err)
 	}
