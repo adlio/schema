@@ -42,7 +42,7 @@ func (p postgresDialect) CreateSQL(tableName string) string {
 // returns the SQL statement needed to insert a migration into it
 func (p postgresDialect) InsertSQL(tableName string) string {
 	return fmt.Sprintf(`
-				INSERT INTO %s 
+				INSERT INTO %s
 				( id, checksum, execution_time_in_millis, applied_at )
 				VALUES
 				( $1, $2, $3, $4 )
