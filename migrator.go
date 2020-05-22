@@ -32,11 +32,22 @@ func NewMigrator(options ...Option) Migrator {
 
 // Apply takes a slice of Migrations and applies any which have not yet
 // been applied
-func (m Migrator) Apply(db *sql.DB, migrations []*Migration) error {
-	err := m.lock(db)
+func (m Migrator) Apply(db *sql.DB, migrations []*Migration) (err error) {
+	err = m.lock(db)
 	if err != nil {
 		return err
 	}
+
+	defer func() {
+		unlockErr := m.unlock(db)
+		if unlockErr != nil {
+			if err == nil {
+				err = unlockErr
+			} else {
+				err = fmt.Errorf("Error unlocking while returning from other err: %w\n%s", err, unlockErr.Error())
+			}
+		}
+	}()
 
 	err = m.createMigrationsTable(db)
 	if err != nil {
@@ -68,7 +79,6 @@ func (m Migrator) Apply(db *sql.DB, migrations []*Migration) error {
 		return nil
 	})
 
-	_ = m.unlock(db)
 	return err
 }
 
