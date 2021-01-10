@@ -12,13 +12,18 @@ require (
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/google/go-cmp v0.3.1 // indirect
 	github.com/gotestyourself/gotestyourself v2.2.0+incompatible // indirect
-	github.com/lib/pq v1.2.0
+	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
+	github.com/kr/pretty v0.1.0 // indirect
+	github.com/lib/pq v1.3.0
+	github.com/mattn/go-sqlite3 v1.14.6
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/opencontainers/runc v0.1.1 // indirect
 	github.com/ory/dockertest v3.3.5+incompatible
 	github.com/sirupsen/logrus v1.4.2 // indirect
+	github.com/stretchr/testify v1.5.1 // indirect
 	golang.org/x/net v0.0.0-20190923162816-aa69164e4478 // indirect
-	golang.org/x/sys v0.0.0-20190924154521-2837fb4f24fe // indirect
+	golang.org/x/sys v0.0.0-20200223170610-d5e6a3e2c0ae // indirect
+	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 	gotest.tools v2.2.0+incompatible // indirect
 )
