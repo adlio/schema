@@ -12,6 +12,8 @@ const postgresAdvisoryLockSalt uint32 = 542384964
 // databases
 var Postgres = postgresDialect{}
 
+var _ SQLLocker = (*postgresDialect)(nil)
+
 // Postgres is the Postgresql dialect
 type postgresDialect struct{}
 
@@ -52,7 +54,7 @@ func (p postgresDialect) InsertSQL(tableName string) string {
 }
 
 // SelectSQL takes the name of the migration tracking table and
-// returns trhe SQL statement to retrieve all records from it
+// returns the SQL statement to retrieve all records from it
 //
 func (p postgresDialect) SelectSQL(tableName string) string {
 	return fmt.Sprintf(`

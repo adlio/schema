@@ -99,7 +99,15 @@ func (m Migrator) lock(db *sql.DB) (err error) {
 	if db == nil {
 		return ErrNilDB
 	}
-	_, err = db.Exec(m.Dialect.LockSQL(m.TableName))
+
+	switch d := m.Dialect.(type) {
+	case SQLLocker:
+		_, err = db.Exec(d.LockSQL(m.TableName))
+	case Locker:
+		err = d.Lock(db)
+	default:
+		panic("dialects must implement at least one locker interface")
+	}
 	m.log("Locked at ", time.Now().Format(time.RFC3339Nano))
 	return err
 }
@@ -108,7 +116,14 @@ func (m Migrator) unlock(db *sql.DB) (err error) {
 	if db == nil {
 		return ErrNilDB
 	}
-	_, err = db.Exec(m.Dialect.UnlockSQL(m.TableName))
+	switch d := m.Dialect.(type) {
+	case SQLLocker:
+		_, err = db.Exec(d.UnlockSQL(m.TableName))
+	case Locker:
+		err = d.Unlock(db)
+	default:
+		panic("dialects must implement at least one locker interface")
+	}
 	m.log("Unlocked at ", time.Now().Format(time.RFC3339Nano))
 	return err
 }

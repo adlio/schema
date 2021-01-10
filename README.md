@@ -41,8 +41,8 @@ tested at the moment, but all the databases below should be easy to add
 with a [contribution](#contributions):
 
 - [x] PostgreSQL
+- [x] SQLite
 - [ ] MySQL (open a Pull Request)
-- [ ] SQLite (open a Pull Request)
 - [ ] SQL Server (open a Pull Request)
 
 ## Roadmap
