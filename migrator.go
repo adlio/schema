@@ -44,7 +44,7 @@ func (m Migrator) Apply(db *sql.DB, migrations []*Migration) (err error) {
 			if err == nil {
 				err = unlockErr
 			} else {
-				err = fmt.Errorf("Error unlocking while returning from other err: %w\n%s", err, unlockErr.Error())
+				err = fmt.Errorf("error unlocking while returning from other err: %w\n%s", err, unlockErr.Error())
 			}
 		}
 	}()

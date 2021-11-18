@@ -27,7 +27,7 @@ type ConnInfo struct {
 }
 
 var DBConns map[string]*ConnInfo = map[string]*ConnInfo{
-	"postgres11": &ConnInfo{
+	"postgres11": {
 		Driver:     "postgres",
 		DockerRepo: "postgres",
 		DockerTag:  "11",
@@ -174,16 +174,14 @@ func TestMigrationsAppliedLexicalOrderByID(t *testing.T) {
 	firstMigration := applied["2019-01-01 001 Should Run First"]
 	if firstMigration == nil {
 		t.Error("Missing first migration")
-	}
-	if firstMigration.Checksum == "" {
+	} else if firstMigration.Checksum == "" {
 		t.Error("Expected checksum to get populated when migration ran")
 	}
 
 	secondMigration := applied["2019-01-01 999 Should Run Last"]
 	if secondMigration == nil {
 		t.Error("Missing second migration")
-	}
-	if secondMigration.Checksum == "" {
+	} else if secondMigration.Checksum == "" {
 		t.Error("Expected checksum to get populated when migration ran")
 	}
 

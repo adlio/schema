@@ -50,7 +50,7 @@ func MigrationFromFilePath(filename string) (migration *Migration, err error) {
 	migration.ID = MigrationIDFromFilename(filename)
 	contents, err := ioutil.ReadFile(path.Clean(filename))
 	if err != nil {
-		return migration, fmt.Errorf("Failed to read migration from '%s': %w", filename, err)
+		return migration, fmt.Errorf("failed to read migration from '%s': %w", filename, err)
 	}
 	migration.Script = string(contents)
 	return migration, err
