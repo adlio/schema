@@ -1,7 +1,6 @@
 package schema
 
 import (
-	"crypto/md5"
 	"database/sql"
 	"fmt"
 	"time"
@@ -113,12 +112,7 @@ func (m Migrator) unlock(db *sql.DB) (err error) {
 	return err
 }
 
-func (m Migrator) runMigration(tx *sql.Tx, migration *Migration) error {
-	var (
-		err      error
-		checksum string
-	)
-
+func (m Migrator) runMigration(tx *sql.Tx, migration *Migration) (err error) {
 	startedAt := time.Now()
 	_, err = tx.Exec(migration.Script)
 	if err != nil {
@@ -128,11 +122,10 @@ func (m Migrator) runMigration(tx *sql.Tx, migration *Migration) error {
 	executionTime := time.Since(startedAt)
 	m.log(fmt.Sprintf("Migration '%s' applied in %s\n", migration.ID, executionTime))
 
-	checksum = fmt.Sprintf("%x", md5.Sum([]byte(migration.Script)))
 	_, err = tx.Exec(
 		m.Dialect.InsertSQL(m.QuotedTableName()),
 		migration.ID,
-		checksum,
+		migration.MD5(),
 		executionTime.Milliseconds(),
 		startedAt,
 	)

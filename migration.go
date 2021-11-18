@@ -1,13 +1,22 @@
 package schema
 
 import (
+	"crypto/md5"
+	"fmt"
 	"sort"
 )
 
-// Migration is a yet-to-be-run change to the schema
+// Migration is a yet-to-be-run change to the schema. This is the type which
+// is provided to Migrator.Apply to request a schema change.
 type Migration struct {
 	ID     string
 	Script string
+}
+
+// MD5 computes the MD5 hash of the Script for this migration so that it
+// can be uniquely identified later.
+func (m *Migration) MD5() string {
+	return fmt.Sprintf("%x", md5.Sum([]byte(m.Script))) // #nosec not using MD5 cryptographically
 }
 
 // SortMigrations sorts a slice of migrations by their IDs
