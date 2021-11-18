@@ -147,7 +147,26 @@ func TestSimultaneousApply(t *testing.T) {
 	if count != concurrency+1 {
 		t.Errorf("Expected to get %d rows in %s table. Instead got %d", concurrency+1, dataTable, count)
 	}
+}
 
+type StrLog string
+
+func (nl *StrLog) Print(msgs ...interface{}) {
+	var sb strings.Builder
+	for _, msg := range msgs {
+		sb.WriteString(fmt.Sprintf("%s", msg))
+	}
+	result := StrLog(sb.String())
+	*nl = result
+}
+
+func TestSimpleLogger(t *testing.T) {
+	var str StrLog
+	m := NewMigrator(WithLogger(&str))
+	m.log("Test message")
+	if str != "Test message" {
+		t.Errorf("Expected logger to print 'Test message'. Got '%s'", str)
+	}
 }
 
 // makeTestMigrator is a utility function which produces a migrator with an
