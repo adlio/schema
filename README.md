@@ -3,9 +3,9 @@
 An opinionated, embeddable library for tracking and application modifications
 to your Go application's database schema.
 
-[![Build Status](https://travis-ci.org/adlio/schema.svg?branch=master)](https://travis-ci.org/adlio/schema)
+[![Build Status](https://travis-ci.org/adlio/schema.svg?branch=main)](https://travis-ci.org/adlio/schema)
 [![Go Report Card](https://goreportcard.com/badge/github.com/adlio/schema)](https://goreportcard.com/report/github.com/adlio/schema)
-[![codecov](https://codecov.io/gh/adlio/schema/branch/master/graph/badge.svg)](https://codecov.io/gh/adlio/schema)
+[![codecov](https://codecov.io/gh/adlio/schema/branch/main/graph/badge.svg)](https://codecov.io/gh/adlio/schema)
 [![GoDoc](https://godoc.org/github.com/adlio/schema?status.svg)](https://godoc.org/github.com/adlio/schema)
 
 ## Package Opinions
@@ -14,25 +14,25 @@ There are many other schema migration tools. This one exists because of a
 particular set of opinions:
 
 1. Database credentials are runtime configuration details, but database
-schema is a **build-time applicaton dependency**, which means it should be
-"compiled in" to the build, and should not rely on external tools.
+   schema is a **build-time applicaton dependency**, which means it should be
+   "compiled in" to the build, and should not rely on external tools.
 2. Using an external command-line tool for schema migrations needlessly
-complicates testing and deployment.
+   complicates testing and deployment.
 3. Sequentially-numbered integer migration IDs will create too many unnecessary
-schema collisions on a distributed, asynchronously-communicating team.
+   schema collisions on a distributed, asynchronously-communicating team.
 4. SQL is the best language to use to specify changes to SQL schemas.
 5. "Down" migrations add needless complication, aren't often used, and are
-tedious to properly test when they are used. In the unlikely event you need
-to migrate backwards, it's possible to write the "rollback" migration as
-a separate "up" migration.
+   tedious to properly test when they are used. In the unlikely event you need
+   to migrate backwards, it's possible to write the "rollback" migration as
+   a separate "up" migration.
 6. Deep dependency chains should be avoided, especially in a compiled
-binary. We don't want to import an ORM into our binaries just to get SQL
-the features of this package. The `schema` package imports only
-[standard library packages](https://godoc.org/github.com/adlio/schema?imports)
-(**NOTE** *We do import `ory/dockertest` in our tests).
+   binary. We don't want to import an ORM into our binaries just to get SQL
+   the features of this package. The `schema` package imports only
+   [standard library packages](https://godoc.org/github.com/adlio/schema?imports)
+   (**NOTE** \*We do import `ory/dockertest` in our tests).
 7. Storing raw SQL as strings inside `.go` files is an acceptable trade-off
-for the above. (For users who depend on `.sql` files, bolt-on integrations
-of go-bindata, go-rice or similar binary embedders are possible).
+   for the above. (For users who depend on `.sql` files, bolt-on integrations
+   of go-bindata, go-rice or similar binary embedders are possible).
 
 ## Supported Databases
 
@@ -54,10 +54,10 @@ with a [contribution](#contributions):
       IDs of previously-run migrations appear to have been changed or when
       problematic migration IDs are being used.
 - [ ] Enhancements to facilitate asset embedding tools like
-  [go-rice](https://github.com/GeertJohan/go.rice) or
-  [packr](https://github.com/gobuffalo/packr) to get syntax highlighting for
-  external `.sql` files which are embedded only at build time (or clear
-  documentation to explain how they can be used without changing `schema`).
+      [go-rice](https://github.com/GeertJohan/go.rice) or
+      [packr](https://github.com/gobuffalo/packr) to get syntax highlighting for
+      external `.sql` files which are embedded only at build time (or clear
+      documentation to explain how they can be used without changing `schema`).
 - [ ] Support for additional databases.
 
 ## Usage Instructions
@@ -108,17 +108,17 @@ will perform its migrations on the database.
 
 ## Rules of Applying Migrations
 
-1. **Never, ever change** the `ID` or `Script` of a Migration which has already
-been executed on your database. If you've made a mistake, you'll need to correct
-it in a subsequent migration.
-2. Use a consistent, but descriptive format for migration `ID`s. Your format
-Consider
-prefixing them with today's timestamp. Examples:
+1.  **Never, ever change** the `ID` or `Script` of a Migration which has already
+    been executed on your database. If you've made a mistake, you'll need to correct
+    it in a subsequent migration.
+2.  Use a consistent, but descriptive format for migration `ID`s. Your format
+    Consider
+    prefixing them with today's timestamp. Examples:
 
-        ID: "2019-01-01T13:45:00 Creates Users"
-        ID: "2001-12-18 001 Changes the Default Value of User Affiliate ID"
+            ID: "2019-01-01T13:45:00 Creates Users"
+            ID: "2001-12-18 001 Changes the Default Value of User Affiliate ID"
 
-    Do not use simple sequentialnumbers like `ID: "1"`.
+        Do not use simple sequentialnumbers like `ID: "1"`.
 
 ## Migration Ordering
 
