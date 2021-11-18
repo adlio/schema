@@ -139,3 +139,35 @@ creating clean test databases.
 Before contributing, please read the [package opinions](#package-opinions)
 section. If your contribution is in disagreement with those opinions, then
 there's a good chance a different schema migration tool is more appropriate.
+
+## Version History
+
+### 1.1.14 - Nov 18, 2021
+
+Security patches in upstream dependencies.
+
+### 1.1.13 - May 22, 2020
+
+Bugfix for error with advisory lock being held open. Improved test coverage for
+simultaneous execution.
+
+### 1.1.11 - May 19, 2020
+
+Use a database-held lock for all migrations not just the initial table creation.
+
+### 1.1.9 - May 17, 2020
+
+Add the ability to attach a logger.
+
+### 1.1.8 - Nov 24, 2019
+
+Switch to `filepath` package for improved cross-platform filesystem support.
+
+### 1.1.7 - Oct 1, 2019
+
+Began using pg_advisory_lock() to prevent race conditions when multiple
+processes/machines try to simultaneously create the migrations table.
+
+### 1.1.1 - Sep 28, 2019
+
+First published version.
