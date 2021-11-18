@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"errors"
 	"os"
 	"testing"
 )
@@ -12,6 +13,13 @@ func TestMigrationFromFilePath(t *testing.T) {
 	}
 	if err != nil {
 		t.Error(err)
+	}
+}
+
+func TestMigrationFromFilePathWithInvalidPath(t *testing.T) {
+	_, err := MigrationFromFilePath("./example-migrations/nonexistent-file.sql")
+	if err == nil {
+		t.Errorf("Expected failure when reading from nonexistent file")
 	}
 }
 
@@ -48,10 +56,47 @@ func TestMigrationsFromDirectoryPath(t *testing.T) {
 
 func TestMigrationsFromDirectoryPathThrowsErrorForInvalidDirectory(t *testing.T) {
 	migrations, err := MigrationsFromDirectoryPath("/a/totally/made/up/directory/path")
-	if err != nil {
+	if err == nil {
 		t.Error("Expected an error trying to load migrations from a fake directory")
 	}
 	if len(migrations) > 0 {
 		t.Errorf("Expected an empty list of migrations. Got %d", len(migrations))
+	}
+}
+
+func TestMigrationsFromDirectoryPathThrowsErrorForInvalidGlob(t *testing.T) {
+	_, err := MigrationsFromDirectoryPath("/a/path[]with/bad/glob/pattern")
+	if err == nil {
+		t.Error("Expected an error trying to load migrations from a fake directory")
+	}
+}
+
+func TestMigrationsFromDirectoryPathThrowsErrorWithUnreadableFiles(t *testing.T) {
+	err := os.Chmod("./unreadable-migrations/unreadable.sql", 0200)
+	if err != nil {
+		t.Error(err)
+	}
+	_, err = MigrationsFromDirectoryPath("./unreadable-migrations")
+	if err == nil {
+		t.Error("Expected a failure when trying to read unreadable file")
+	}
+	_ = os.Chmod("./unreadable-migrations/unreadable.sql", 0644) // #nosec
+}
+
+type failedReader int
+
+func (fr failedReader) Name() string {
+	return "fakeFile.sql"
+}
+
+func (fr failedReader) Read(p []byte) (n int, err error) {
+	return 0, errors.New("this reader always fails")
+}
+
+func TestMigrationFromFileWithUnreadableFile(t *testing.T) {
+	var fr failedReader
+	_, err := MigrationFromFile(fr)
+	if err == nil {
+		t.Error("Expected MigrationFromFile to fail when given erroneous file")
 	}
 }

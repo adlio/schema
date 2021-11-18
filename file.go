@@ -3,6 +3,8 @@ package schema
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
+	"path"
 	"path/filepath"
 	"strings"
 )
@@ -18,18 +20,24 @@ func MigrationIDFromFilename(filename string) string {
 // contents of the directory. Only .sql files are read
 func MigrationsFromDirectoryPath(dirPath string) (migrations []*Migration, err error) {
 	migrations = make([]*Migration, 0)
+
+	// Assemble a glob of the .sql files in the directory. This can
+	// only fail if the dirPath itself contains invalid glob characters
 	filenames, err := filepath.Glob(filepath.Join(dirPath, "*.sql"))
 	if err != nil {
 		return migrations, err
 	}
+
+	// Friendly failure: if the user provides a valid-looking, but nonexistent
+	// directory, we want to error instead of returning an empty set
+	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
+		return migrations, fmt.Errorf("migrations directory does not exist: %w", err)
+	}
+
 	for _, filename := range filenames {
-		content, err := ioutil.ReadFile(filename)
+		migration, err := MigrationFromFilePath(filename)
 		if err != nil {
 			return migrations, err
-		}
-		migration := &Migration{
-			ID:     MigrationIDFromFilename(filename),
-			Script: string(content),
 		}
 		migrations = append(migrations, migration)
 	}
@@ -40,7 +48,7 @@ func MigrationsFromDirectoryPath(dirPath string) (migrations []*Migration, err e
 func MigrationFromFilePath(filename string) (migration *Migration, err error) {
 	migration = &Migration{}
 	migration.ID = MigrationIDFromFilename(filename)
-	contents, err := ioutil.ReadFile(filename)
+	contents, err := ioutil.ReadFile(path.Clean(filename))
 	if err != nil {
 		return migration, fmt.Errorf("Failed to read migration from '%s': %w", filename, err)
 	}

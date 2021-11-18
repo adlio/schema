@@ -1,0 +1,1 @@
+CREATE fake_table (id INTEGER);
