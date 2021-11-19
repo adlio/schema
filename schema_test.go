@@ -14,6 +14,18 @@ import (
 	"github.com/ory/dockertest"
 )
 
+// Interface verification that *sql.DB satisfies our Transactor interface
+var (
+	_ Transactor = &sql.DB{}
+)
+
+// Interface verification that *sql.Tx and *sql.DB both satisfy our
+// Queryer interface
+var (
+	_ Queryer = &sql.DB{}
+	_ Queryer = &sql.Tx{}
+)
+
 type ConnInfo struct {
 	Driver     string
 	DockerRepo string
