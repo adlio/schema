@@ -32,6 +32,10 @@ func NewMigrator(options ...Option) Migrator {
 // Apply takes a slice of Migrations and applies any which have not yet
 // been applied
 func (m Migrator) Apply(db *sql.DB, migrations []*Migration) (err error) {
+	if db == nil {
+		return ErrNilDB
+	}
+
 	err = m.lock(db)
 	if err != nil {
 		return err
