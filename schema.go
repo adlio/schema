@@ -3,7 +3,6 @@ package schema
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 )
 
 // DefaultTableName defines the name of the database table which will
@@ -32,35 +31,4 @@ type Queryer interface {
 //
 type Transactor interface {
 	Begin() (*sql.Tx, error)
-}
-
-// transaction wraps the supplied function in a transaction with the supplied
-// database connecion
-//
-func transaction(db Transactor, f func(Queryer) error) (err error) {
-	if db == nil {
-		return ErrNilDB
-	}
-	tx, err := db.Begin()
-	if err != nil {
-		return
-	}
-
-	defer func() {
-		if p := recover(); p != nil {
-			switch p := p.(type) {
-			case error:
-				err = p
-			default:
-				err = fmt.Errorf("%s", p)
-			}
-		}
-		if err != nil {
-			_ = tx.Rollback()
-			return
-		}
-		err = tx.Commit()
-	}()
-
-	return f(tx)
 }

@@ -16,7 +16,7 @@ type Migration struct {
 // MD5 computes the MD5 hash of the Script for this migration so that it
 // can be uniquely identified later.
 func (m *Migration) MD5() string {
-	return fmt.Sprintf("%x", md5.Sum([]byte(m.Script))) // #nosec not using MD5 cryptographically
+	return fmt.Sprintf("%x", md5.Sum([]byte(m.Script)))
 }
 
 // SortMigrations sorts a slice of migrations by their IDs

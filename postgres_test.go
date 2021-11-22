@@ -16,15 +16,15 @@ func TestPostgresLockSQL(t *testing.T) {
 func TestPostgres11CreateMigrationsTable(t *testing.T) {
 	db := connectDB(t, "postgres11")
 	migrator := NewMigrator(WithDialect(Postgres))
-	err := migrator.createMigrationsTable(db)
-	if err != nil {
-		t.Errorf("Error occurred when creating migrations table: %s", err)
+	migrator.createMigrationsTable(db)
+	if migrator.err != nil {
+		t.Errorf("Error occurred when creating migrations table: %s", migrator.err)
 	}
 
 	// Test that we can re-run it safely
-	err = migrator.createMigrationsTable(db)
-	if err != nil {
-		t.Errorf("Calling createMigrationsTable a second time failed: %s", err)
+	migrator.createMigrationsTable(db)
+	if migrator.err != nil {
+		t.Errorf("Calling createMigrationsTable a second time failed: %s", migrator.err)
 	}
 }
 

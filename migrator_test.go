@@ -149,23 +149,148 @@ func TestSimultaneousApply(t *testing.T) {
 	}
 }
 
-type StrLog string
+func TestBeginTransactionFailure(t *testing.T) {
+	m := makeTestMigrator()
+	bt := BadTransactor{}
 
-func (nl *StrLog) Print(msgs ...interface{}) {
-	var sb strings.Builder
-	for _, msg := range msgs {
-		sb.WriteString(fmt.Sprintf("%s", msg))
+	m.transaction(bt, func(q Queryer) error {
+		return nil
+	})
+	if !errors.Is(m.err, ErrBeginFailed) {
+		t.Errorf("Expected ErrBeginFailed, got %v", m.err)
 	}
-	result := StrLog(sb.String())
-	*nl = result
+}
+func TestCreateMigrationsTable(t *testing.T) {
+	db := connectDB(t, "postgres11")
+	migrator := makeTestMigrator()
+	migrator.createMigrationsTable(db)
+	if migrator.err != nil {
+		t.Errorf("Error occurred when creating migrations table: %s", migrator.err)
+	}
+
+	// Test that we can re-run it safely
+	migrator.createMigrationsTable(db)
+	if migrator.err != nil {
+		t.Errorf("Calling createMigrationsTable a second time failed: %s", migrator.err)
+	}
 }
 
-func TestSimpleLogger(t *testing.T) {
-	var str StrLog
-	m := NewMigrator(WithLogger(&str))
-	m.log("Test message")
-	if str != "Test message" {
-		t.Errorf("Expected logger to print 'Test message'. Got '%s'", str)
+func TestCreateMigrationsTableFailure(t *testing.T) {
+	m := makeTestMigrator()
+	bt := BadTransactor{}
+	m.err = ErrPriorFailure
+	m.createMigrationsTable(bt)
+	if m.err != ErrPriorFailure {
+		t.Errorf("Expected error %v. Got %v.", ErrPriorFailure, m.err)
+	}
+}
+
+func TestLockFailure(t *testing.T) {
+	bq := BadQueryer{}
+	m := makeTestMigrator()
+	m.lock(bq)
+	expectedContents := "FAIL: SELECT pg_advisory_lock"
+	if m.err == nil || !strings.Contains(m.err.Error(), expectedContents) {
+		t.Errorf("Expected error msg with '%s'. Got '%s'", expectedContents, m.err)
+	}
+
+	m.err = ErrPriorFailure
+	m.lock(bq)
+	if m.err != ErrPriorFailure {
+		t.Errorf("Expected error %v. Got %v", ErrPriorFailure, m.err)
+	}
+}
+
+func TestUnlockFailure(t *testing.T) {
+	bq := BadQueryer{}
+	m := makeTestMigrator()
+	m.unlock(bq)
+	expectedContents := "FAIL: SELECT pg_advisory_unlock"
+	if m.err == nil || !strings.Contains(m.err.Error(), expectedContents) {
+		t.Errorf("Expected error msg with '%s'. Got '%v'", expectedContents, m.err)
+	}
+
+	m.err = ErrPriorFailure
+	m.unlock(bq)
+	if m.err != ErrPriorFailure {
+		t.Errorf("Expected error %v. Got %v.", ErrPriorFailure, m.err)
+	}
+}
+
+func TestRunFailure(t *testing.T) {
+	bc := BadConnection{}
+	m := makeTestMigrator()
+	m.run(bc, makeValidUnorderedMigrations())
+	expectedContents := "FAIL: SELECT id, checksum"
+	if m.err == nil || !strings.Contains(m.err.Error(), expectedContents) {
+		t.Errorf("Expected error msg with '%s'. Got '%v'.", expectedContents, m.err)
+	}
+
+	m.err = ErrPriorFailure
+	m.run(bc, makeValidUnorderedMigrations())
+	if m.err != ErrPriorFailure {
+		t.Errorf("Expected error %v. Got %v.", ErrPriorFailure, m.err)
+	}
+
+	m.err = nil
+	m.run(nil, makeValidUnorderedMigrations())
+	if m.err != ErrNilDB {
+		t.Errorf("Expected error '%s'. Got '%v'.", expectedContents, m.err)
+	}
+}
+
+func TestMigrationWithPriorError(t *testing.T) {
+	bc := BadConnection{}
+	m := makeTestMigrator()
+	m.err = ErrPriorFailure
+	m.transaction(bc, func(q Queryer) error {
+		return nil
+	})
+	if m.err != ErrPriorFailure {
+		t.Errorf("Expected error %v. Got %v", ErrPriorFailure, m.err)
+	}
+}
+
+func TestComputeMigrationPlanFailure(t *testing.T) {
+	bq := BadQueryer{}
+	m := makeTestMigrator()
+	_, err := m.computeMigrationPlan(bq, []*Migration{})
+	expectedContents := "FAIL: SELECT id, checksum, execution_time_in_millis, applied_at"
+	if err == nil || !strings.Contains(err.Error(), expectedContents) {
+		t.Errorf("Expected error msg with '%s'. Got '%v'.", expectedContents, err)
+	}
+}
+
+func TestMigrationRecoversFromPanics(t *testing.T) {
+	db := connectDB(t, "postgres11")
+	migrator := makeTestMigrator()
+	migrator.transaction(db, func(tx Queryer) error {
+		panic(errors.New("Panic Error"))
+	})
+	if migrator.err == nil {
+		t.Error("Expected error to be set after panic. Got nil")
+	} else if migrator.err.Error() != "Panic Error" {
+		t.Errorf("Expected panic to be converted to error=Panic Error. Got %v", migrator.err)
+	}
+
+	migrator.err = nil
+	migrator.transaction(db, func(tx Queryer) error {
+		panic("Panic String")
+	})
+
+	if migrator.err == nil {
+		t.Error("Expected error to be set after panic. Got nil")
+	} else if migrator.err.Error() != "Panic String" {
+		t.Errorf("Expected panic to be converted to error=Panic String. Got %v", migrator.err)
+	}
+}
+func TestNilTransaction(t *testing.T) {
+	migrator := makeTestMigrator()
+	migrator.transaction(nil, func(q Queryer) error {
+		return nil
+	})
+	if !errors.Is(migrator.err, ErrNilDB) {
+		t.Errorf("Expected ErrNilDB. Got %v", migrator.err)
 	}
 }
 
@@ -176,4 +301,24 @@ func makeTestMigrator(options ...Option) Migrator {
 	tableName := time.Now().Format(time.RFC3339Nano)
 	options = append(options, WithTableName(tableName))
 	return NewMigrator(options...)
+}
+
+func makeValidUnorderedMigrations() []*Migration {
+	return []*Migration{
+		{
+			ID: "2021-01-01 002",
+			Script: `CREATE TABLE data_table (
+				id INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+				created_at TIMESTAMP WITH TIME ZONE NOT NULL
+			)`,
+		},
+		{
+			ID:     "2021-01-01 001",
+			Script: "CREATE TABLE first_table (created_at TIMESTAMP WITH TIME ZONE NOT NULL)",
+		},
+		{
+			ID:     "2021-01-01 003",
+			Script: `INSERT INTO data_table (created_at) VALUES (NOW())`,
+		},
+	}
 }

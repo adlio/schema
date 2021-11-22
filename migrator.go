@@ -7,13 +7,17 @@ import (
 )
 
 // Migrator is an instance customized to perform migrations on a particular
-// against a particular tracking table and with a particular dialect
+// database against a particular tracking table and with a particular dialect
 // defined.
 type Migrator struct {
 	SchemaName string
 	TableName  string
 	Dialect    Dialect
 	Logger     Logger
+
+	// err holds the last error which occurred at any step of the migration
+	// process
+	err error
 }
 
 // NewMigrator creates a new Migrator with the supplied
@@ -31,92 +35,106 @@ func NewMigrator(options ...Option) Migrator {
 
 // Apply takes a slice of Migrations and applies any which have not yet
 // been applied
-func (m Migrator) Apply(db *sql.DB, migrations []*Migration) (err error) {
+func (m *Migrator) Apply(db Connection, migrations []*Migration) (err error) {
 	if db == nil {
 		return ErrNilDB
 	}
 
-	err = m.lock(db)
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		unlockErr := m.unlock(db)
-		if unlockErr != nil {
-			if err == nil {
-				err = unlockErr
-			} else {
-				err = fmt.Errorf("error unlocking while returning from other err: %w\n%s", err, unlockErr.Error())
-			}
-		}
-	}()
-
-	err = m.createMigrationsTable(db)
-	if err != nil {
-		return err
-	}
-
-	err = transaction(db, func(tx *sql.Tx) error {
-		applied, err := m.GetAppliedMigrations(tx)
-		if err != nil {
-			return err
-		}
-
-		plan := make([]*Migration, 0)
-		for _, migration := range migrations {
-			if _, exists := applied[migration.ID]; !exists {
-				plan = append(plan, migration)
-			}
-		}
-
-		SortMigrations(plan)
-
-		for _, migration := range plan {
-			err = m.runMigration(tx, migration)
-			if err != nil {
-				return err
-			}
-		}
-
-		return nil
-	})
-
-	return err
+	m.err = nil
+	m.lock(db)
+	defer m.unlock(db)
+	m.createMigrationsTable(db)
+	m.run(db, migrations)
+	return m.err
 }
 
 // QuotedTableName returns the dialect-quoted fully-qualified name for the
 // migrations tracking table
-func (m Migrator) QuotedTableName() string {
+func (m *Migrator) QuotedTableName() string {
 	return m.Dialect.QuotedTableName(m.SchemaName, m.TableName)
 }
 
-func (m Migrator) createMigrationsTable(db *sql.DB) (err error) {
-	return transaction(db, func(tx *sql.Tx) error {
+func (m *Migrator) createMigrationsTable(db Transactor) {
+	if m.err != nil {
+		// Abort if Migrator already had an error
+		return
+	}
+	m.transaction(db, func(tx Queryer) error {
 		_, err := tx.Exec(m.Dialect.CreateSQL(m.QuotedTableName()))
 		return err
 	})
 }
 
-func (m Migrator) lock(db *sql.DB) (err error) {
-	if db == nil {
-		return ErrNilDB
+func (m *Migrator) lock(db Queryer) {
+	if m.err != nil {
+		// Abort if Migrator already had an error
+		return
 	}
-	_, err = db.Exec(m.Dialect.LockSQL(m.TableName))
-	m.log("Locked at ", time.Now().Format(time.RFC3339Nano))
-	return err
+	_, err := db.Exec(m.Dialect.LockSQL(m.TableName))
+	if err == nil {
+		m.log("Locked at ", time.Now().Format(time.RFC3339Nano))
+	} else {
+		m.err = err
+	}
 }
 
-func (m Migrator) unlock(db *sql.DB) (err error) {
-	if db == nil {
-		return ErrNilDB
+func (m *Migrator) unlock(db Queryer) {
+	_, err := db.Exec(m.Dialect.UnlockSQL(m.TableName))
+	if err == nil {
+		m.log("Unlocked at ", time.Now().Format(time.RFC3339Nano))
+	} else if m.err == nil {
+		// Only set the migrator error if we're not overwriting an
+		// earlier error
+		m.err = err
 	}
-	_, err = db.Exec(m.Dialect.UnlockSQL(m.TableName))
-	m.log("Unlocked at ", time.Now().Format(time.RFC3339Nano))
-	return err
 }
 
-func (m Migrator) runMigration(tx *sql.Tx, migration *Migration) (err error) {
+func (m *Migrator) computeMigrationPlan(db Queryer, toRun []*Migration) (plan []*Migration, err error) {
+	applied, err := m.GetAppliedMigrations(db)
+	if err != nil {
+		return plan, err
+	}
+
+	plan = make([]*Migration, 0)
+	for _, migration := range toRun {
+		if _, exists := applied[migration.ID]; !exists {
+			plan = append(plan, migration)
+		}
+	}
+
+	SortMigrations(plan)
+	return plan, err
+}
+
+func (m *Migrator) run(db Connection, migrations []*Migration) {
+	if m.err != nil {
+		// Abort if Migrator already had an error
+		return
+	}
+
+	if db == nil {
+		m.err = ErrNilDB
+		return
+	}
+
+	var plan []*Migration
+	plan, m.err = m.computeMigrationPlan(db, migrations)
+	if m.err != nil {
+		return
+	}
+
+	m.transaction(db, func(tx Queryer) (err error) {
+		for _, migration := range plan {
+			err := m.runMigration(tx, migration)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+func (m *Migrator) runMigration(tx Queryer, migration *Migration) (err error) {
 	startedAt := time.Now()
 	_, err = tx.Exec(migration.Script)
 	if err != nil {
@@ -136,7 +154,52 @@ func (m Migrator) runMigration(tx *sql.Tx, migration *Migration) (err error) {
 	return err
 }
 
-func (m Migrator) log(msgs ...interface{}) {
+// transaction wraps the supplied function in a transaction with the supplied
+// database connecion
+//
+func (m *Migrator) transaction(db Transactor, f func(Queryer) error) {
+	if db == nil {
+		m.err = ErrNilDB
+		return
+	}
+
+	if m.err != nil {
+		// Abort if Migrator already had an error
+		return
+	}
+
+	var tx *sql.Tx
+	tx, m.err = db.Begin()
+	if m.err != nil {
+		return
+	}
+
+	defer func() {
+		if p := recover(); p != nil {
+			switch p := p.(type) {
+			case error:
+				m.err = p
+			default:
+				m.err = fmt.Errorf("%s", p)
+			}
+		}
+		if m.err != nil {
+			if tx != nil {
+				_ = tx.Rollback()
+			}
+			return
+		} else if tx != nil {
+			m.err = tx.Commit()
+		}
+	}()
+
+	fErr := f(tx)
+	if fErr != nil {
+		m.err = fErr
+	}
+}
+
+func (m *Migrator) log(msgs ...interface{}) {
 	if m.Logger != nil {
 		m.Logger.Print(msgs...)
 	}
