@@ -3,8 +3,11 @@ package schema
 import (
 	"database/sql"
 
-	// Postgres database driver
+	// Postgres Driver
 	_ "github.com/lib/pq"
+
+	// SQLite driver
+	_ "github.com/mattn/go-sqlite3"
 )
 
 // Interface verification that *sql.DB satisfies our Connection interface

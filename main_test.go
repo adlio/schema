@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/ory/dockertest"
 )
@@ -23,6 +25,10 @@ var DBConns map[string]*ConnInfo = map[string]*ConnInfo{
 		Driver:     "postgres",
 		DockerRepo: "postgres",
 		DockerTag:  "11",
+	},
+	"sqlite": {
+		Driver: "sqlite3",
+		DSN:    filepath.Join(os.TempDir(), fmt.Sprintf("sqlite_test_%d.db", time.Now().Unix())),
 	},
 }
 
@@ -80,9 +86,18 @@ func TestMain(m *testing.M) {
 
 	// Purge all the containers we created
 	// You can't defer this because os.Exit doesn't execute defers
-	for _, info := range DBConns {
-		if err := pool.Purge(info.Resource); err != nil {
-			log.Fatalf("Could not purge	resource: %s", err)
+	for connType, info := range DBConns {
+		if info.Resource != nil {
+			if err := pool.Purge(info.Resource); err != nil {
+				log.Fatalf("Could not purge	resource: %s", err)
+			}
+		}
+
+		switch connType {
+		case "sqlite":
+			if err := os.Remove(info.DSN); err != nil && !os.IsNotExist(err) {
+				log.Printf("Warning: could not delete sqlite database: %s", err)
+			}
 		}
 	}
 

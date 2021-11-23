@@ -65,12 +65,12 @@ func (m *Migrator) createMigrationsTable(db Transactor) {
 	})
 }
 
-func (m *Migrator) lock(db Queryer) {
+func (m *Migrator) lock(db Connection) {
 	if m.err != nil {
 		// Abort if Migrator already had an error
 		return
 	}
-	_, err := db.Exec(m.Dialect.LockSQL(m.TableName))
+	err := m.Dialect.Lock(db, m.TableName)
 	if err == nil {
 		m.log("Locked at ", time.Now().Format(time.RFC3339Nano))
 	} else {
@@ -78,8 +78,8 @@ func (m *Migrator) lock(db Queryer) {
 	}
 }
 
-func (m *Migrator) unlock(db Queryer) {
-	_, err := db.Exec(m.Dialect.UnlockSQL(m.TableName))
+func (m *Migrator) unlock(db Connection) {
+	err := m.Dialect.Unlock(db, m.TableName)
 	if err == nil {
 		m.log("Unlocked at ", time.Now().Format(time.RFC3339Nano))
 	} else if m.err == nil {

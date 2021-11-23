@@ -15,14 +15,16 @@ var Postgres = postgresDialect{}
 // Postgres is the Postgresql dialect
 type postgresDialect struct{}
 
-func (p postgresDialect) LockSQL(tableName string) string {
+func (p postgresDialect) Lock(db Connection, tableName string) error {
 	lockID := p.advisoryLockID(tableName)
-	return fmt.Sprintf(`SELECT pg_advisory_lock(%s)`, lockID)
+	_, err := db.Exec(`SELECT pg_advisory_lock($1)`, lockID)
+	return err
 }
 
-func (p postgresDialect) UnlockSQL(tableName string) string {
+func (p postgresDialect) Unlock(db Connection, tableName string) error {
 	lockID := p.advisoryLockID(tableName)
-	return fmt.Sprintf(`SELECT pg_advisory_unlock(%s)`, lockID)
+	_, err := db.Exec(`SELECT pg_advisory_unlock($1)`, lockID)
+	return err
 }
 
 // CreateSQL takes the name of the migration tracking table and
@@ -52,7 +54,7 @@ func (p postgresDialect) InsertSQL(tableName string) string {
 }
 
 // SelectSQL takes the name of the migration tracking table and
-// returns trhe SQL statement to retrieve all records from it
+// returns the SQL statement to retrieve all records from it
 //
 func (p postgresDialect) SelectSQL(tableName string) string {
 	return fmt.Sprintf(`

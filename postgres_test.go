@@ -1,18 +1,9 @@
 package schema
 
 import (
-	"strings"
 	"testing"
 )
 
-func TestPostgresLockSQL(t *testing.T) {
-	name := `"schema_migrations"`
-
-	sql := Postgres.LockSQL(name)
-	if !strings.Contains(strings.ToLower(sql), "pg_advisory_lock") {
-		t.Errorf("EXPECTED pg_advisory_lock:\n%s", sql)
-	}
-}
 func TestPostgres11CreateMigrationsTable(t *testing.T) {
 	db := connectDB(t, "postgres11")
 	migrator := NewMigrator(WithDialect(Postgres))

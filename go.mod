@@ -10,7 +10,8 @@ require (
 	github.com/containerd/continuity v0.2.1 // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/gotestyourself/gotestyourself v2.2.0+incompatible // indirect
-	github.com/lib/pq v1.10.4
+	github.com/lib/pq v1.10.4 // indirect
+	github.com/mattn/go-sqlite3 v1.14.9 // indirect
 	github.com/opencontainers/image-spec v1.0.2 // indirect
 	github.com/opencontainers/runc v1.0.2 // indirect
 	github.com/ory/dockertest v3.3.5+incompatible

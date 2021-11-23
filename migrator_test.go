@@ -186,32 +186,32 @@ func TestCreateMigrationsTableFailure(t *testing.T) {
 }
 
 func TestLockFailure(t *testing.T) {
-	bq := BadQueryer{}
+	bc := BadConnection{}
 	m := makeTestMigrator()
-	m.lock(bq)
+	m.lock(bc)
 	expectedContents := "FAIL: SELECT pg_advisory_lock"
 	if m.err == nil || !strings.Contains(m.err.Error(), expectedContents) {
 		t.Errorf("Expected error msg with '%s'. Got '%s'", expectedContents, m.err)
 	}
 
 	m.err = ErrPriorFailure
-	m.lock(bq)
+	m.lock(bc)
 	if m.err != ErrPriorFailure {
 		t.Errorf("Expected error %v. Got %v", ErrPriorFailure, m.err)
 	}
 }
 
 func TestUnlockFailure(t *testing.T) {
-	bq := BadQueryer{}
+	bc := BadConnection{}
 	m := makeTestMigrator()
-	m.unlock(bq)
+	m.unlock(bc)
 	expectedContents := "FAIL: SELECT pg_advisory_unlock"
 	if m.err == nil || !strings.Contains(m.err.Error(), expectedContents) {
 		t.Errorf("Expected error msg with '%s'. Got '%v'", expectedContents, m.err)
 	}
 
 	m.err = ErrPriorFailure
-	m.unlock(bq)
+	m.unlock(bc)
 	if m.err != ErrPriorFailure {
 		t.Errorf("Expected error %v. Got %v.", ErrPriorFailure, m.err)
 	}
