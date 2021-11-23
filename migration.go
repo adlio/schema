@@ -1,23 +1,22 @@
 package schema
 
 import (
+	"crypto/md5"
+	"fmt"
 	"sort"
-	"time"
 )
 
-// Migration is a yet-to-be-run change to the schema
+// Migration is a yet-to-be-run change to the schema. This is the type which
+// is provided to Migrator.Apply to request a schema change.
 type Migration struct {
 	ID     string
 	Script string
 }
 
-// AppliedMigration is a schema change which was successfully
-// completed
-type AppliedMigration struct {
-	Migration
-	Checksum              string
-	ExecutionTimeInMillis int
-	AppliedAt             time.Time
+// MD5 computes the MD5 hash of the Script for this migration so that it
+// can be uniquely identified later.
+func (m *Migration) MD5() string {
+	return fmt.Sprintf("%x", md5.Sum([]byte(m.Script)))
 }
 
 // SortMigrations sorts a slice of migrations by their IDs
@@ -26,27 +25,4 @@ func SortMigrations(migrations []*Migration) {
 	sort.Slice(migrations, func(i, j int) bool {
 		return migrations[i].ID < migrations[j].ID
 	})
-}
-
-// GetAppliedMigrations retrieves all already-applied migrations in a map keyed
-// by the migration IDs
-//
-func (m Migrator) GetAppliedMigrations(db Queryer) (applied map[string]*AppliedMigration, err error) {
-	applied = make(map[string]*AppliedMigration)
-	migrations := make([]*AppliedMigration, 0)
-
-	rows, err := db.Query(m.Dialect.SelectSQL(m.QuotedTableName()))
-	if err != nil {
-		return
-	}
-	defer rows.Close()
-	for rows.Next() {
-		migration := AppliedMigration{}
-		err = rows.Scan(&migration.ID, &migration.Checksum, &migration.ExecutionTimeInMillis, &migration.AppliedAt)
-		migrations = append(migrations, &migration)
-	}
-	for _, migration := range migrations {
-		applied[migration.ID] = migration
-	}
-	return applied, err
 }

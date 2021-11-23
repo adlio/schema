@@ -1,8 +1,10 @@
 package schema
 
 import (
+	"fmt"
 	"log"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -68,5 +70,25 @@ func TestWithLoggerOption(t *testing.T) {
 	modifiedMigrator := WithLogger(log.New(os.Stdout, "schema: ", log.Ldate|log.Ltime))(m)
 	if modifiedMigrator.Logger == nil {
 		t.Errorf("Expected logger to have been added")
+	}
+}
+
+type StrLog string
+
+func (nl *StrLog) Print(msgs ...interface{}) {
+	var sb strings.Builder
+	for _, msg := range msgs {
+		sb.WriteString(fmt.Sprintf("%s", msg))
+	}
+	result := StrLog(sb.String())
+	*nl = result
+}
+
+func TestSimpleLogger(t *testing.T) {
+	var str StrLog
+	m := NewMigrator(WithLogger(&str))
+	m.log("Test message")
+	if str != "Test message" {
+		t.Errorf("Expected logger to print 'Test message'. Got '%s'", str)
 	}
 }
