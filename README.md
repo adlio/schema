@@ -5,7 +5,6 @@ to your Go application's database schema.
 
 [![go.dev reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=for-the-badge)](https://pkg.go.dev/github.com/adlio/schema)
 [![Travis Build Status](https://img.shields.io/travis/com/adlio/schema/main?style=for-the-badge)](https://travis-ci.com/github/adlio/schema)
-
 [![Go Report Card](https://goreportcard.com/badge/github.com/adlio/schema?style=for-the-badge)](https://goreportcard.com/report/github.com/adlio/schema)
 [![Code Coverage](https://img.shields.io/codecov/c/github/adlio/schema?style=for-the-badge)](https://codecov.io/gh/adlio/schema)
 
@@ -51,14 +50,11 @@ with a [contribution](#contributions):
 - [x] Basic feature set for PostgreSQL
 - [x] Continuous integration tests / Code coverage
 - [x] Basic Documentation: basic overview, usage documentation
+- [ ] MySQL Support
+- [ ] Enhancements and documentation to facilitate asset embedding via go:embed
 - [ ] Add a validation pass inside `Apply()` to throw an error when checksums or
       IDs of previously-run migrations appear to have been changed or when
       problematic migration IDs are being used.
-- [ ] Enhancements to facilitate asset embedding tools like
-      [go-rice](https://github.com/GeertJohan/go.rice) or
-      [packr](https://github.com/gobuffalo/packr) to get syntax highlighting for
-      external `.sql` files which are embedded only at build time (or clear
-      documentation to explain how they can be used without changing `schema`).
 - [ ] Support for additional databases.
 
 ## Usage Instructions
@@ -142,6 +138,10 @@ section. If your contribution is in disagreement with those opinions, then
 there's a good chance a different schema migration tool is more appropriate.
 
 ## Version History
+
+### Pending Version (tip)
+
+SQLite support
 
 ### 1.1.14 - Nov 18, 2021
 
