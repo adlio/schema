@@ -12,12 +12,7 @@ import (
 
 func TestApplyWithNilDBProvidesHelpfulError(t *testing.T) {
 	m := NewMigrator()
-	err := m.Apply(nil, []*Migration{
-		{
-			ID:     "2019-01-01 Test",
-			Script: "CREATE TABLE fake_table (id INTEGER)",
-		},
-	})
+	err := m.Apply(nil, makeValidUnorderedMigrations())
 	if !errors.Is(err, ErrNilDB) {
 		t.Errorf("Expected %v, got %v", ErrNilDB, err)
 	}
