@@ -8,6 +8,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/go-sql-driver/mysql"
 	"github.com/ory/dockertest"
 	"github.com/ory/dockertest/docker"
 )
@@ -15,6 +16,7 @@ import (
 const (
 	PostgresDriverName = "postgres"
 	SQLiteDriverName   = "sqlite3"
+	MySQLDriverName    = "mysql"
 )
 
 // TestDBs holds all of the specific database instances against which tests
@@ -30,6 +32,12 @@ var TestDBs map[string]*TestDB = map[string]*TestDB{
 	"sqlite": {
 		Dialect: NewSQLite(),
 		Driver:  SQLiteDriverName,
+	},
+	"mysql": {
+		Dialect:    MySQL,
+		Driver:     MySQLDriverName,
+		DockerRepo: "mysql",
+		DockerTag:  "latest",
 	},
 }
 
@@ -59,6 +67,8 @@ func (c *TestDB) DatabaseName() string {
 
 func (c *TestDB) Port() string {
 	switch c.Driver {
+	case MySQLDriverName:
+		return c.Resource.GetPort("3306/tcp")
 	case PostgresDriverName:
 		return c.Resource.GetPort("5432/tcp")
 	}
@@ -80,6 +90,13 @@ func (c *TestDB) DockerEnvars() []string {
 			fmt.Sprintf("POSTGRES_USER=%s", c.Username()),
 			fmt.Sprintf("POSTGRES_PASSWORD=%s", c.Password()),
 			fmt.Sprintf("POSTGRES_DB=%s", c.DatabaseName()),
+		}
+	case MySQLDriverName:
+		return []string{
+			"MYSQL_RANDOM_ROOT_PASSWORD=true",
+			fmt.Sprintf("MYSQL_USER=%s", c.Username()),
+			fmt.Sprintf("MYSQL_PASSWORD=%s", c.Password()),
+			fmt.Sprintf("MYSQL_DATABASE=%s", c.DatabaseName()),
 		}
 	default:
 		return []string{}
@@ -105,6 +122,8 @@ func (c *TestDB) DSN() string {
 		return fmt.Sprintf("postgres://%s:%s@localhost:%s/%s?sslmode=disable", c.Username(), c.Password(), c.Port(), c.DatabaseName())
 	case SQLiteDriverName:
 		return c.Path()
+	case MySQLDriverName:
+		return fmt.Sprintf("%s:%s@(localhost:%s)/%s?parseTime=true&multiStatements=true", c.Username(), c.Password(), c.Port(), c.DatabaseName())
 	}
 	// TODO Return error
 	return "NoDSN"
@@ -117,6 +136,11 @@ func (c *TestDB) Init(pool *dockertest.Pool) {
 		// For Docker-based test databases, we send a startup signal to have Docker
 		// launch a container for this test run.
 		log.Printf("Starting docker container %s:%s\n", c.DockerRepo, c.DockerTag)
+
+		if c.Driver == MySQLDriverName {
+			// Disable logging for MySQL while we await startup of the Docker container
+			mysql.SetLogger(nullMySQLLogger{})
+		}
 
 		// The container is started with AutoRemove: true, and a restart policy to
 		// not restart
@@ -156,6 +180,11 @@ func (c *TestDB) Init(pool *dockertest.Pool) {
 		log.Fatalf("Could not connect to %s: %s", c.DSN(), err)
 	} else {
 		log.Printf("Successfully connected to %s", c.DSN())
+	}
+
+	if c.Driver == MySQLDriverName {
+		// Restore the default MySQL logger after we successfully connect
+		mysql.SetLogger(log.New(os.Stderr, "[mysql] ", log.Ldate|log.Ltime|log.Lshortfile))
 	}
 }
 

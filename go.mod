@@ -9,9 +9,10 @@ require (
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/containerd/continuity v0.2.1 // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
+	github.com/go-sql-driver/mysql v1.6.0
 	github.com/gotestyourself/gotestyourself v2.2.0+incompatible // indirect
-	github.com/lib/pq v1.10.4 // indirect
-	github.com/mattn/go-sqlite3 v1.14.9 // indirect
+	github.com/lib/pq v1.10.4
+	github.com/mattn/go-sqlite3 v1.14.9
 	github.com/opencontainers/image-spec v1.0.2 // indirect
 	github.com/opencontainers/runc v1.0.2 // indirect
 	github.com/ory/dockertest v3.3.5+incompatible
