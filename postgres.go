@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"hash/crc32"
 	"strings"
+	"unicode"
 )
 
 const postgresAdvisoryLockSalt uint32 = 542384964
@@ -69,15 +70,37 @@ func (p postgresDialect) SelectSQL(tableName string) string {
 //
 func (p postgresDialect) QuotedTableName(schemaName, tableName string) string {
 	if schemaName == "" {
-		return p.quotedIdent(tableName)
+		return p.QuotedIdent(tableName)
 	}
-	return p.quotedIdent(schemaName) + "." + p.quotedIdent(tableName)
+	return p.QuotedIdent(schemaName) + "." + p.QuotedIdent(tableName)
 }
 
-// quotedIdent wraps the supplied string in the Postgres identifier
+// QuotedIdent wraps the supplied string in the Postgres identifier
 // quote character
-func (p postgresDialect) quotedIdent(ident string) string {
-	return `"` + strings.ReplaceAll(ident, `"`, "") + `"`
+func (p postgresDialect) QuotedIdent(ident string) string {
+	if ident == "" {
+		return ""
+	}
+
+	var sb strings.Builder
+	sb.WriteRune('"')
+	for _, r := range ident {
+		switch {
+		case unicode.IsSpace(r):
+			// Skip spaces
+			continue
+		case r == '"':
+			// Escape double-quotes with repeated double-quotes
+			sb.WriteString(`""`)
+		case r == ';':
+			// Ignore the command termination character
+			continue
+		default:
+			sb.WriteRune(r)
+		}
+	}
+	sb.WriteRune('"')
+	return sb.String()
 }
 
 // advisoryLockID generates a table-specific lock name to use
