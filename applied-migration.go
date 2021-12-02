@@ -34,7 +34,12 @@ func (m Migrator) GetAppliedMigrations(db Queryer) (applied map[string]*AppliedM
 	defer rows.Close()
 	for rows.Next() {
 		migration := AppliedMigration{}
+
 		err = rows.Scan(&migration.ID, &migration.Checksum, &migration.ExecutionTimeInMillis, &migration.AppliedAt)
+		if err != nil {
+			return applied, err
+		}
+
 		migrations = append(migrations, &migration)
 	}
 	for _, migration := range migrations {
