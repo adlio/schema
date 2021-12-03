@@ -39,6 +39,12 @@ var TestDBs map[string]*TestDB = map[string]*TestDB{
 		DockerRepo: "mysql",
 		DockerTag:  "latest",
 	},
+	"mariadb:latest": {
+		Dialect:    MySQL,
+		Driver:     MySQLDriverName,
+		DockerRepo: "mysql",
+		DockerTag:  "latest",
+	},
 }
 
 // TestDB represents a specific database instance against which we would like
