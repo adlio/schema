@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -37,12 +38,20 @@ func (bt BadTransactor) Begin() (*sql.Tx, error) {
 	return nil, ErrBeginFailed
 }
 
+func (bt BadTransactor) BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error) {
+	return nil, ErrBeginFailed
+}
+
 // BadConnection implements the Connection interface, but fails on all calls to
 // Begin(), Query() or Exec()
 //
 type BadConnection struct{}
 
 func (bc BadConnection) Begin() (*sql.Tx, error) {
+	return nil, ErrBeginFailed
+}
+
+func (bt BadConnection) BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error) {
 	return nil, ErrBeginFailed
 }
 
@@ -68,9 +77,7 @@ func TestNilTransaction(t *testing.T) {
 	nt := Transactor(nil)
 	withEachDialect(t, func(t *testing.T, d Dialect) {
 		migrator := NewMigrator(WithDialect(d))
-		migrator.transaction(nt, func(q Queryer) error {
-			return nil
-		})
+		migrator.transaction(nt, func(q Queryer) {})
 		if !errors.Is(migrator.err, ErrNilDB) {
 			t.Errorf("Expected ErrNilDB. Got %v", migrator.err)
 		}
@@ -140,9 +147,7 @@ func TestApplyWithPriorError(t *testing.T) {
 	withEachDialect(t, func(t *testing.T, d Dialect) {
 		migrator := NewMigrator(WithDialect(d))
 		migrator.err = ErrPriorFailure
-		migrator.transaction(bc, func(q Queryer) error {
-			return nil
-		})
+		migrator.transaction(bc, func(q Queryer) {})
 		if migrator.err != ErrPriorFailure {
 			t.Errorf("Expected error %v. Got %v", ErrPriorFailure, migrator.err)
 		}
@@ -152,9 +157,7 @@ func TestBeginTransactionFailure(t *testing.T) {
 	bt := BadTransactor{}
 	withEachDialect(t, func(t *testing.T, d Dialect) {
 		migrator := NewMigrator(WithDialect(d))
-		migrator.transaction(bt, func(q Queryer) error {
-			return nil
-		})
+		migrator.transaction(bt, func(q Queryer) {})
 		if !errors.Is(migrator.err, ErrBeginFailed) {
 			t.Errorf("Expected ErrBeginFailed, got %v", migrator.err)
 		}
@@ -162,7 +165,7 @@ func TestBeginTransactionFailure(t *testing.T) {
 }
 
 func TestCreateMigrationsTableFailure(t *testing.T) {
-	bq := BadTransactor{}
+	bq := BadQueryer{}
 	withEachDialect(t, func(t *testing.T, d Dialect) {
 		migrator := NewMigrator(WithDialect(d))
 		migrator.err = ErrPriorFailure

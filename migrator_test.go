@@ -286,9 +286,7 @@ func TestRunFailure(t *testing.T) {
 func TestMigrationRecoversFromPanics(t *testing.T) {
 	db := connectDB(t, "postgres11")
 	migrator := makeTestMigrator()
-	migrator.transaction(db, func(tx Queryer) error {
-		panic(errors.New("Panic Error"))
-	})
+	migrator.transaction(db, func(tx Queryer) { panic(errors.New("Panic Error")) })
 	if migrator.err == nil {
 		t.Error("Expected error to be set after panic. Got nil")
 	} else if migrator.err.Error() != "Panic Error" {
@@ -296,9 +294,7 @@ func TestMigrationRecoversFromPanics(t *testing.T) {
 	}
 
 	migrator.err = nil
-	migrator.transaction(db, func(tx Queryer) error {
-		panic("Panic String")
-	})
+	migrator.transaction(db, func(tx Queryer) { panic("Panic String") })
 
 	if migrator.err == nil {
 		t.Error("Expected error to be set after panic. Got nil")

@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"time"
@@ -41,10 +42,15 @@ func (m *Migrator) Apply(db Connection, migrations []*Migration) (err error) {
 	}
 
 	m.err = nil
+
 	m.lock(db)
 	defer m.unlock(db)
-	m.createMigrationsTable(db)
-	m.run(db, migrations)
+
+	m.transaction(db, func(tx Queryer) {
+		m.createMigrationsTable(tx)
+		m.run(tx, migrations)
+	})
+
 	return m.err
 }
 
@@ -54,23 +60,20 @@ func (m *Migrator) QuotedTableName() string {
 	return m.Dialect.QuotedTableName(m.SchemaName, m.TableName)
 }
 
-func (m *Migrator) createMigrationsTable(db Transactor) {
+func (m *Migrator) createMigrationsTable(tx Queryer) {
 	if m.err != nil {
 		// Abort if Migrator already had an error
 		return
 	}
-	m.transaction(db, func(tx Queryer) error {
-		_, err := tx.Exec(m.Dialect.CreateSQL(m.QuotedTableName()))
-		return err
-	})
+	_, m.err = tx.Exec(m.Dialect.CreateSQL(m.QuotedTableName()))
 }
 
-func (m *Migrator) lock(db Connection) {
+func (m *Migrator) lock(tx Queryer) {
 	if m.err != nil {
 		// Abort if Migrator already had an error
 		return
 	}
-	err := m.Dialect.Lock(db, m.TableName)
+	err := m.Dialect.Lock(tx, m.TableName)
 	if err == nil {
 		m.log("Locked at ", time.Now().Format(time.RFC3339Nano))
 	} else {
@@ -78,8 +81,8 @@ func (m *Migrator) lock(db Connection) {
 	}
 }
 
-func (m *Migrator) unlock(db Connection) {
-	err := m.Dialect.Unlock(db, m.TableName)
+func (m *Migrator) unlock(tx Queryer) {
+	err := m.Dialect.Unlock(tx, m.TableName)
 	if err == nil {
 		m.log("Unlocked at ", time.Now().Format(time.RFC3339Nano))
 	} else if m.err == nil {
@@ -89,8 +92,8 @@ func (m *Migrator) unlock(db Connection) {
 	}
 }
 
-func (m *Migrator) computeMigrationPlan(db Queryer, toRun []*Migration) (plan []*Migration, err error) {
-	applied, err := m.GetAppliedMigrations(db)
+func (m *Migrator) computeMigrationPlan(tx Queryer, toRun []*Migration) (plan []*Migration, err error) {
+	applied, err := m.GetAppliedMigrations(tx)
 	if err != nil {
 		return plan, err
 	}
@@ -106,32 +109,29 @@ func (m *Migrator) computeMigrationPlan(db Queryer, toRun []*Migration) (plan []
 	return plan, err
 }
 
-func (m *Migrator) run(db Connection, migrations []*Migration) {
+func (m *Migrator) run(tx Queryer, migrations []*Migration) {
 	if m.err != nil {
 		// Abort if Migrator already had an error
 		return
 	}
 
-	if db == nil {
+	if tx == nil {
 		m.err = ErrNilDB
 		return
 	}
 
 	var plan []*Migration
-	plan, m.err = m.computeMigrationPlan(db, migrations)
+	plan, m.err = m.computeMigrationPlan(tx, migrations)
 	if m.err != nil {
 		return
 	}
 
-	m.transaction(db, func(tx Queryer) (err error) {
-		for _, migration := range plan {
-			err := m.runMigration(tx, migration)
-			if err != nil {
-				return err
-			}
+	for _, migration := range plan {
+		m.err = m.runMigration(tx, migration)
+		if m.err != nil {
+			return
 		}
-		return nil
-	})
+	}
 }
 
 func (m *Migrator) runMigration(tx Queryer, migration *Migration) (err error) {
@@ -155,9 +155,9 @@ func (m *Migrator) runMigration(tx Queryer, migration *Migration) (err error) {
 }
 
 // transaction wraps the supplied function in a transaction with the supplied
-// database connecion
+// database connection
 //
-func (m *Migrator) transaction(db Transactor, f func(Queryer) error) {
+func (m *Migrator) transaction(db Transactor, f func(Queryer)) {
 	if db == nil {
 		m.err = ErrNilDB
 		return
@@ -169,7 +169,7 @@ func (m *Migrator) transaction(db Transactor, f func(Queryer) error) {
 	}
 
 	var tx *sql.Tx
-	tx, m.err = db.Begin()
+	tx, m.err = db.BeginTx(context.Background(), &sql.TxOptions{Isolation: sql.LevelSerializable})
 	if m.err != nil {
 		return
 	}
@@ -193,10 +193,7 @@ func (m *Migrator) transaction(db Transactor, f func(Queryer) error) {
 		}
 	}()
 
-	fErr := f(tx)
-	if fErr != nil {
-		m.err = fErr
-	}
+	f(tx)
 }
 
 func (m *Migrator) log(msgs ...interface{}) {

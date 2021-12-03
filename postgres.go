@@ -15,13 +15,13 @@ var Postgres = postgresDialect{}
 
 type postgresDialect struct{}
 
-func (p postgresDialect) Lock(db Connection, tableName string) error {
+func (p postgresDialect) Lock(db Queryer, tableName string) error {
 	lockID := p.advisoryLockID(tableName)
 	_, err := db.Exec(`SELECT pg_advisory_lock($1)`, lockID)
 	return err
 }
 
-func (p postgresDialect) Unlock(db Connection, tableName string) error {
+func (p postgresDialect) Unlock(db Queryer, tableName string) error {
 	lockID := p.advisoryLockID(tableName)
 	_, err := db.Exec(`SELECT pg_advisory_unlock($1)`, lockID)
 	return err

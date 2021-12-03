@@ -11,6 +11,6 @@ type Dialect interface {
 	SelectSQL(tableName string) string
 	InsertSQL(tableName string) string
 
-	Lock(db Connection, tableName string) error
-	Unlock(db Connection, tableName string) error
+	Lock(db Queryer, tableName string) error
+	Unlock(db Queryer, tableName string) error
 }
