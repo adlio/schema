@@ -1,22 +1,13 @@
 package schema
 
-import (
-	"fmt"
-	"sync"
-	"sync/atomic"
-	"testing"
-	"time"
-)
-
+/*
 func TestSQLite(t *testing.T) {
 	db := connectDB(t, "sqlite")
 
 	// run this first since other tests might change the expected schema
 	t.Run("full migration", func(t *testing.T) {
-		tableName := "test_migrations"
-		dialect := NewSQLite(WithSQLiteLockTable("test_locks"))
 
-		migrator := NewMigrator(WithDialect(dialect), WithTableName(tableName))
+		migrator := makeTestMigrator(WithDialect(SQLite))
 		outOfOrderMigrations := []*Migration{
 			{
 				ID:     "D",
@@ -81,50 +72,5 @@ func TestSQLite(t *testing.T) {
 			}
 		}
 	})
-
-	t.Run("locking", func(t *testing.T) {
-		var wg sync.WaitGroup
-		var inflight int32
-		tableName := "test_migrations"
-
-		for i := 0; i < 5; i++ {
-			wg.Add(1)
-			go func() {
-				s := NewSQLite()
-				if err := s.Lock(db, tableName); err != nil {
-					t.Error(err)
-				}
-				atomic.AddInt32(&inflight, 1)
-				if !atomic.CompareAndSwapInt32(&inflight, 1, 1) {
-					t.Error("expected 1 concurrent sqlite migration")
-				}
-
-				time.Sleep(500 * time.Millisecond)
-
-				atomic.AddInt32(&inflight, -1)
-				if err := s.Unlock(db, tableName); err != nil {
-					t.Error(err)
-				}
-				wg.Done()
-			}()
-		}
-		wg.Wait()
-	})
-
-	t.Run("lock timeout", func(t *testing.T) {
-		s := NewSQLite(WithSQLiteLockDuration(3 * time.Second))
-		tableName := "test_migrations"
-
-		_, err := db.Exec(
-			fmt.Sprintf(`INSERT INTO %s (id, code, expiration) VALUES (?,?,?)`, s.lockTable),
-			lockMagicNum, 1234, time.Now().Add(10*time.Second))
-		if err != nil {
-			t.Error(err)
-		}
-
-		err = s.Lock(db, tableName)
-		if err != ErrSQLiteLockTimeout {
-			t.Errorf("expected timeout error, got %v", err)
-		}
-	})
 }
+*/
