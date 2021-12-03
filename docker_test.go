@@ -23,7 +23,7 @@ const (
 // will run. The connectDB test helper refere ces the keys of this map, and
 // the withEachDB helper runs tests against every database defined here.
 var TestDBs map[string]*TestDB = map[string]*TestDB{
-	"postgres11": {
+	"postgres:latest": {
 		Dialect:    Postgres,
 		Driver:     PostgresDriverName,
 		DockerRepo: "postgres",
@@ -33,7 +33,7 @@ var TestDBs map[string]*TestDB = map[string]*TestDB{
 		Dialect: NewSQLite(),
 		Driver:  SQLiteDriverName,
 	},
-	"mysql": {
+	"mysql:latest": {
 		Dialect:    MySQL,
 		Driver:     MySQLDriverName,
 		DockerRepo: "mysql",

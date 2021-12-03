@@ -284,7 +284,7 @@ func TestRunFailure(t *testing.T) {
 }
 
 func TestMigrationRecoversFromPanics(t *testing.T) {
-	db := connectDB(t, "postgres11")
+	db := connectDB(t, "postgres:latest")
 	migrator := makeTestMigrator()
 	migrator.transaction(db, func(tx Queryer) { panic(errors.New("Panic Error")) })
 	if migrator.err == nil {

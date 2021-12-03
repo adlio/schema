@@ -50,7 +50,7 @@ func TestGetAppliedMigrationsHasFriendlyScanError(t *testing.T) {
 	// We are only testing PostgreSQL here because making the row scan
 	// fail requires the structure of the table to change, and ALTER TABLE
 	// DDL is inconsistent across database vendors.
-	withTestDB(t, "postgres11", func(t *testing.T, tdb *TestDB) {
+	withTestDB(t, "postgres:latest", func(t *testing.T, tdb *TestDB) {
 		db := tdb.Connect(t)
 		defer func() { _ = db.Close() }()
 
