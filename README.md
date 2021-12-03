@@ -36,26 +36,23 @@ particular set of opinions:
 
 ## Supported Databases
 
-This package was extracted from a PostgreSQL project, so that's all that's
-tested at the moment, but all the databases below should be easy to add
-with a [contribution](#contributions):
+This package was extracted from a PostgreSQL project, and that is the only
+database with extensive in-the-wild testing. Other databases have solid automated
+test coverage, but should be considered somewhat experimental in production
+use cases. [Contribution](#contributions) are welcome for additional databases
+or feature enhancements / bug fixes.
 
 - [x] PostgreSQL
 - [x] SQLite
-- [ ] MySQL (open a Pull Request)
+- [x] MySQL / MariaDB
 - [ ] SQL Server (open a Pull Request)
 
 ## Roadmap
 
-- [x] Basic feature set for PostgreSQL
-- [x] Continuous integration tests / Code coverage
-- [x] Basic Documentation: basic overview, usage documentation
-- [ ] MySQL Support
 - [ ] Enhancements and documentation to facilitate asset embedding via go:embed
-- [ ] Add a validation pass inside `Apply()` to throw an error when checksums or
-      IDs of previously-run migrations appear to have been changed or when
-      problematic migration IDs are being used.
-- [ ] Support for additional databases.
+- [ ] Add a `Validate()` method to allow checking migration names for
+      consistency and to detect problematic changes in the migrations list.
+- [ ] SQL Server support
 
 ## Usage Instructions
 
@@ -139,9 +136,9 @@ there's a good chance a different schema migration tool is more appropriate.
 
 ## Version History
 
-### Pending Version (tip)
+### Pending Version 2 (tip)
 
-SQLite support
+SQLite and MySQL support.
 
 ### 1.1.14 - Nov 18, 2021
 
