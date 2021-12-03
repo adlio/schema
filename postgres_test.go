@@ -4,6 +4,12 @@ import (
 	"testing"
 )
 
+// Interface verification that Postgres is a valid Dialect
+var (
+	_ Dialect = Postgres
+	_ Locker  = Postgres
+)
+
 func TestPostgreSQLQuotedTableName(t *testing.T) {
 	type qtnTest struct {
 		schema, table string

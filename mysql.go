@@ -12,16 +12,14 @@ var MySQL = mysqlDialect{}
 
 type mysqlDialect struct{}
 
-func (m mysqlDialect) Lock(db Queryer, tableName string) error {
+func (m mysqlDialect) LockSQL(tableName string) string {
 	lockID := m.advisoryLockID(tableName)
-	_, err := db.Exec(`SELECT GET_LOCK(?, 10)`, lockID)
-	return err
+	return fmt.Sprintf(`SELECT GET_LOCK(%s, 10)`, lockID)
 }
 
-func (m mysqlDialect) Unlock(db Queryer, tableName string) error {
+func (m mysqlDialect) UnlockSQL(tableName string) string {
 	lockID := m.advisoryLockID(tableName)
-	_, err := db.Exec(`SELECT RELEASE_LOCK(?)`, lockID)
-	return err
+	return fmt.Sprintf(`SELECT RELEASE_LOCK(%s)`, lockID)
 }
 
 func (m mysqlDialect) CreateSQL(tableName string) string {

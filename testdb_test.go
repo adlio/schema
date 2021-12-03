@@ -13,40 +13,6 @@ import (
 	"github.com/ory/dockertest/docker"
 )
 
-const (
-	PostgresDriverName = "postgres"
-	SQLiteDriverName   = "sqlite3"
-	MySQLDriverName    = "mysql"
-)
-
-// TestDBs holds all of the specific database instances against which tests
-// will run. The connectDB test helper refere ces the keys of this map, and
-// the withEachDB helper runs tests against every database defined here.
-var TestDBs map[string]*TestDB = map[string]*TestDB{
-	"postgres:latest": {
-		Dialect:    Postgres,
-		Driver:     PostgresDriverName,
-		DockerRepo: "postgres",
-		DockerTag:  "latest",
-	},
-	"sqlite": {
-		Dialect: NewSQLite(),
-		Driver:  SQLiteDriverName,
-	},
-	"mysql:latest": {
-		Dialect:    MySQL,
-		Driver:     MySQLDriverName,
-		DockerRepo: "mysql",
-		DockerTag:  "latest",
-	},
-	"mariadb:latest": {
-		Dialect:    MySQL,
-		Driver:     MySQLDriverName,
-		DockerRepo: "mysql",
-		DockerTag:  "latest",
-	},
-}
-
 // TestDB represents a specific database instance against which we would like
 // to run database migration tests.
 //
@@ -71,6 +37,9 @@ func (c *TestDB) DatabaseName() string {
 	return "schematests"
 }
 
+// Port asks Docker for the host-side port we can use to connect to the
+// relevant container's database port.
+//
 func (c *TestDB) Port() string {
 	switch c.Driver {
 	case MySQLDriverName:
@@ -89,6 +58,9 @@ func (c *TestDB) IsSQLite() bool {
 	return c.Driver == SQLiteDriverName
 }
 
+// DockerEnvars computes the environment variables that are needed for a
+// docker instance.
+//
 func (c *TestDB) DockerEnvars() []string {
 	switch c.Driver {
 	case PostgresDriverName:
@@ -109,6 +81,8 @@ func (c *TestDB) DockerEnvars() []string {
 	}
 }
 
+// Path computes the full path to the database on disk (applies only to SQLite
+// instances).
 func (c *TestDB) Path() string {
 	switch c.Driver {
 	case SQLiteDriverName:
@@ -135,6 +109,11 @@ func (c *TestDB) DSN() string {
 	return "NoDSN"
 }
 
+// Init sets up a test database instance for connections. For dockertest-based
+// instances, this function triggers the `docker run` call. For SQLite-based
+// test instances, this creates the data file. In all cases, we verify that
+// the database is connectable via a test connection.
+//
 func (c *TestDB) Init(pool *dockertest.Pool) {
 	var err error
 
@@ -194,6 +173,9 @@ func (c *TestDB) Init(pool *dockertest.Pool) {
 	}
 }
 
+// Connect creates an additional *database/sql.DB connection for a particular
+// test database.
+//
 func (c *TestDB) Connect(t *testing.T) *sql.DB {
 	db, err := sql.Open(c.Driver, c.DSN())
 	if err != nil {
@@ -202,6 +184,10 @@ func (c *TestDB) Connect(t *testing.T) *sql.DB {
 	return db
 }
 
+// Cleanup should be called after all tests with a database instance are
+// complete. For dockertest-based tests, it deletes the docker containers.
+// For SQLite tests, it deletes the database file from the temp directory.
+//
 func (c *TestDB) Cleanup(pool *dockertest.Pool) {
 	var err error
 

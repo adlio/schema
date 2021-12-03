@@ -15,16 +15,14 @@ var Postgres = postgresDialect{}
 
 type postgresDialect struct{}
 
-func (p postgresDialect) Lock(db Queryer, tableName string) error {
+func (p postgresDialect) LockSQL(tableName string) string {
 	lockID := p.advisoryLockID(tableName)
-	_, err := db.Exec(`SELECT pg_advisory_lock($1)`, lockID)
-	return err
+	return fmt.Sprintf("SELECT pg_advisory_lock(%s)", lockID)
 }
 
-func (p postgresDialect) Unlock(db Queryer, tableName string) error {
+func (p postgresDialect) UnlockSQL(tableName string) string {
 	lockID := p.advisoryLockID(tableName)
-	_, err := db.Exec(`SELECT pg_advisory_unlock($1)`, lockID)
-	return err
+	return fmt.Sprintf("SELECT pg_advisory_unlock(%s)", lockID)
 }
 
 // CreateSQL takes the name of the migration tracking table and

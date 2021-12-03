@@ -9,6 +9,7 @@ import (
 // Interface verification that MySQL is a valid Dialect
 var (
 	_ Dialect = MySQL
+	_ Locker  = MySQL
 )
 
 func TestMySQLQuotedTableName(t *testing.T) {

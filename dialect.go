@@ -1,6 +1,6 @@
 package schema
 
-// Dialect defines the interface for a database dialect.
+// Dialect defines the minimal interface for a database dialect.
 // All interface functions take the customized table name
 // as input and return a SQL statement with placeholders
 // appropriate to the database.
@@ -10,7 +10,12 @@ type Dialect interface {
 	CreateSQL(tableName string) string
 	SelectSQL(tableName string) string
 	InsertSQL(tableName string) string
+}
 
-	Lock(db Queryer, tableName string) error
-	Unlock(db Queryer, tableName string) error
+// Locker defines an optional Dialect extension for obtaining and releasing
+// a global database lock during the running of migrations. This feature is
+// supported by PostgreSQL and MySQL, but not SQLite.
+type Locker interface {
+	LockSQL(tableName string) string
+	UnlockSQL(tableName string) string
 }

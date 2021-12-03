@@ -91,10 +91,12 @@ func TestLockFailure(t *testing.T) {
 	bc := BadConnection{}
 
 	withEachTestDB(t, func(t *testing.T, tdb *TestDB) {
-		migrator := makeTestMigrator(WithDialect(tdb.Dialect))
-		migrator.lock(bc)
-		if migrator.err == nil {
-			t.Fatal("Expected error due to failed lock")
+		if _, isLocker := tdb.Dialect.(Locker); isLocker {
+			migrator := makeTestMigrator(WithDialect(tdb.Dialect))
+			migrator.lock(bc)
+			if migrator.err == nil {
+				t.Fatal("Expected error due to failed lock")
+			}
 		}
 	})
 }
@@ -121,24 +123,26 @@ func TestLockWithPriorFailure(t *testing.T) {
 func TestUnlockFailure(t *testing.T) {
 	bc := BadConnection{}
 	withEachTestDB(t, func(t *testing.T, tdb *TestDB) {
+		_, isLocker := tdb.Dialect.(Locker)
+		if isLocker {
+			db := tdb.Connect(t)
+			defer func() { _ = db.Close() }()
 
-		db := tdb.Connect(t)
-		defer func() { _ = db.Close() }()
+			migrator := makeTestMigrator(WithDialect(tdb.Dialect))
+			migrator.lock(db)
+			if migrator.err != nil {
+				t.Fatal(migrator.err)
+			}
 
-		migrator := makeTestMigrator(WithDialect(tdb.Dialect))
-		migrator.lock(db)
-		if migrator.err != nil {
-			t.Fatal(migrator.err)
+			migrator.unlock(bc)
+			if migrator.err == nil {
+				t.Error("Expected error due to failed unlock")
+			}
+
+			// Successfully unlock this time to leave the test database in a
+			// happy state for other tests
+			migrator.unlock(db)
 		}
-
-		migrator.unlock(bc)
-		if migrator.err == nil {
-			t.Error("Expected error due to failed unlock")
-		}
-
-		// Successfully unlock this time to leave the test database in a
-		// happy state for other tests
-		migrator.unlock(db)
 	})
 }
 

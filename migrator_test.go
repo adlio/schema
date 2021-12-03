@@ -41,14 +41,17 @@ func TestLockAndUnlock(t *testing.T) {
 		defer func() { _ = db.Close() }()
 
 		migrator := makeTestMigrator(WithDialect(tdb.Dialect))
-		migrator.lock(db)
-		if migrator.err != nil {
-			t.Fatal(migrator.err)
-		}
 
-		migrator.unlock(db)
-		if migrator.err != nil {
-			t.Fatal(migrator.err)
+		if _, isLocker := tdb.Dialect.(Locker); isLocker {
+			migrator.lock(db)
+			if migrator.err != nil {
+				t.Fatal(migrator.err)
+			}
+
+			migrator.unlock(db)
+			if migrator.err != nil {
+				t.Fatal(migrator.err)
+			}
 		}
 	})
 }
