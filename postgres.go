@@ -13,7 +13,6 @@ const postgresAdvisoryLockSalt uint32 = 542384964
 // databases
 var Postgres = postgresDialect{}
 
-// Postgres is the Postgresql dialect
 type postgresDialect struct{}
 
 func (p postgresDialect) Lock(db Connection, tableName string) error {

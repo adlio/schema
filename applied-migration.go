@@ -1,6 +1,9 @@
 package schema
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 // AppliedMigration represents a successfully-executed migration. It embeds
 // Migration, and adds fields for execution results. This type is what
@@ -29,6 +32,7 @@ func (m Migrator) GetAppliedMigrations(db Queryer) (applied map[string]*AppliedM
 
 	rows, err := db.Query(m.Dialect.SelectSQL(m.QuotedTableName()))
 	if err != nil {
+		err = fmt.Errorf("failed to GetAppliedMigrations. Check the %s table?: %w", m.QuotedTableName(), err)
 		return
 	}
 	defer rows.Close()
@@ -37,6 +41,7 @@ func (m Migrator) GetAppliedMigrations(db Queryer) (applied map[string]*AppliedM
 
 		err = rows.Scan(&migration.ID, &migration.Checksum, &migration.ExecutionTimeInMillis, &migration.AppliedAt)
 		if err != nil {
+			err = fmt.Errorf("failed to GetAppliedMigrations. Did somebody change the structure of the %s table?: %w", m.QuotedTableName(), err)
 			return applied, err
 		}
 
