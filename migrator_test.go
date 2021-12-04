@@ -57,13 +57,17 @@ func TestLockAndUnlock(t *testing.T) {
 }
 
 // TestApplyInLexicalOrder ensures that each dialect runs migrations in their
-// lexical order rather than the order they were provided in the slice.
+// lexical order rather than the order they were provided in the slice. This is
+// also the primary test to assert that the data in the tracking table is
+// all correct.
 //
 func TestApplyInLexicalOrder(t *testing.T) {
 	withEachTestDB(t, func(t *testing.T, tdb *TestDB) {
 
 		db := tdb.Connect(t)
 		defer func() { _ = db.Close() }()
+
+		start := time.Now().Round(time.Second) // Rounding needed because MySQL stores second-level accuracy
 
 		tableName := "lexical_order_migrations"
 		migrator := NewMigrator(WithDialect(tdb.Dialect), WithTableName(tableName))
@@ -72,6 +76,8 @@ func TestApplyInLexicalOrder(t *testing.T) {
 			t.Error(err)
 		}
 
+		end := time.Now().Round(time.Second)
+
 		applied, err := migrator.GetAppliedMigrations(db)
 		if err != nil {
 			t.Error(err)
@@ -79,16 +85,29 @@ func TestApplyInLexicalOrder(t *testing.T) {
 		if len(applied) != 3 {
 			t.Errorf("Expected exactly 2 applied migrations. Got %d", len(applied))
 		}
+
 		firstMigration := applied["2021-01-01 001"]
 		if firstMigration == nil {
-			t.Error("Missing first migration")
-		} else if firstMigration.Checksum == "" {
-			t.Error("Expected checksum to get populated when migration ran")
+			t.Fatal("Missing first migration")
+		}
+		if firstMigration.Checksum == "" {
+			t.Error("Expected non-blank Checksum value after successful migration")
+		}
+		if firstMigration.ExecutionTimeInMillis < 1 {
+			t.Errorf("Expected ExecutionTimeInMillis of %s to be tracked. Got %d", firstMigration.ID, firstMigration.ExecutionTimeInMillis)
+		}
+		// Put value in consistent timezone to aid error message readability
+		appliedAt := firstMigration.AppliedAt.Round(time.Second)
+		if appliedAt.IsZero() || appliedAt.Before(start) || appliedAt.After(end) {
+			t.Errorf("Expected AppliedAt between %s and %s, got %s", start, end, appliedAt)
+		}
+		if appliedAt.Location() != start.Location() {
+			t.Errorf("Expected AppliedAt time zone to be in time zone '%s'. Got '%s' instead", start.Location(), appliedAt.Location())
 		}
 
 		secondMigration := applied["2021-01-01 002"]
 		if secondMigration == nil {
-			t.Error("Missing second migration")
+			t.Fatal("Missing second migration")
 		} else if secondMigration.Checksum == "" {
 			t.Fatal("Expected checksum to get populated when migration ran")
 		}

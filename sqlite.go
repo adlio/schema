@@ -44,7 +44,7 @@ func (s sqliteDialect) SelectSQL(tableName string) string {
 }
 
 // QuotedTableName returns the string value of the name of the migration
-// tracking table after it has been quoted for Postgres
+// tracking table after it has been quoted for SQLite
 func (s sqliteDialect) QuotedTableName(schemaName, tableName string) string {
 	ident := schemaName + tableName
 	if ident == "" {

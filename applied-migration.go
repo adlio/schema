@@ -23,6 +23,34 @@ type AppliedMigration struct {
 	AppliedAt time.Time
 }
 
+type applyTime struct {
+	Value time.Time
+}
+
+func (t *applyTime) Scan(src interface{}) (err error) {
+	if src == nil {
+		t.Value = time.Time{}
+	}
+
+	if srcTime, isTime := src.(time.Time); isTime {
+		t.Value = srcTime
+		return nil
+	}
+
+	return t.ScanString(fmt.Sprintf("%s", src))
+}
+
+func (t *applyTime) ScanString(src string) (err error) {
+	switch len(src) {
+	case 19:
+		t.Value, err = time.ParseInLocation("2006-01-02 03:04:05", src, time.UTC)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // GetAppliedMigrations retrieves all already-applied migrations in a map keyed
 // by the migration IDs
 //
@@ -39,11 +67,13 @@ func (m Migrator) GetAppliedMigrations(db Queryer) (applied map[string]*AppliedM
 	for rows.Next() {
 		migration := AppliedMigration{}
 
-		err = rows.Scan(&migration.ID, &migration.Checksum, &migration.ExecutionTimeInMillis, &migration.AppliedAt)
+		var appliedAt applyTime
+		err = rows.Scan(&migration.ID, &migration.Checksum, &migration.ExecutionTimeInMillis, &appliedAt)
 		if err != nil {
 			err = fmt.Errorf("failed to GetAppliedMigrations. Did somebody change the structure of the %s table?: %w", m.QuotedTableName(), err)
 			return applied, err
 		}
+		migration.AppliedAt = appliedAt.Value
 
 		migrations = append(migrations, &migration)
 	}

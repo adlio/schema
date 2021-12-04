@@ -150,11 +150,17 @@ func (m *Migrator) runMigration(tx Queryer, migration *Migration) (err error) {
 	executionTime := time.Since(startedAt)
 	m.log(fmt.Sprintf("Migration '%s' applied in %s\n", migration.ID, executionTime))
 
+	ms := executionTime.Milliseconds()
+	if ms == 0 && executionTime.Microseconds() > 0 {
+		// Avoid rounding down to 0 for very, very fast migrations
+		ms = 1
+	}
+
 	_, err = tx.Exec(
 		m.Dialect.InsertSQL(m.QuotedTableName()),
 		migration.ID,
 		migration.MD5(),
-		executionTime.Milliseconds(),
+		ms,
 		startedAt,
 	)
 	return err

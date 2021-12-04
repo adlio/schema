@@ -103,7 +103,12 @@ func (c *TestDB) DSN() string {
 	case SQLiteDriverName:
 		return c.Path()
 	case MySQLDriverName:
-		return fmt.Sprintf("%s:%s@(localhost:%s)/%s?parseTime=true&multiStatements=true", c.Username(), c.Password(), c.Port(), c.DatabaseName())
+		if c.DockerRepo == "mariadb" {
+			return fmt.Sprintf("%s:%s@(localhost:%s)/%s?parseTime=true&multiStatements=true", c.Username(), c.Password(), c.Port(), c.DatabaseName())
+		} else {
+			return fmt.Sprintf("%s:%s@(localhost:%s)/%s?multiStatements=true", c.Username(), c.Password(), c.Port(), c.DatabaseName())
+
+		}
 	}
 	// TODO Return error
 	return "NoDSN"
