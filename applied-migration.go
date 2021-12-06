@@ -33,7 +33,7 @@ func (t *applyTime) Scan(src interface{}) (err error) {
 	}
 
 	if srcTime, isTime := src.(time.Time); isTime {
-		t.Value = srcTime
+		t.Value = srcTime.In(time.Local)
 		return nil
 	}
 
@@ -43,11 +43,12 @@ func (t *applyTime) Scan(src interface{}) (err error) {
 func (t *applyTime) ScanString(src string) (err error) {
 	switch len(src) {
 	case 19:
-		t.Value, err = time.ParseInLocation("2006-01-02 03:04:05", src, time.UTC)
+		t.Value, err = time.ParseInLocation("2006-01-02 15:04:05", src, time.UTC)
 		if err != nil {
 			return err
 		}
 	}
+	t.Value = t.Value.In(time.Local)
 	return nil
 }
 
