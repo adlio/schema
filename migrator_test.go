@@ -101,9 +101,7 @@ func TestApplyInLexicalOrder(t *testing.T) {
 		if appliedAt.IsZero() || appliedAt.Before(start) || appliedAt.After(end) {
 			t.Errorf("Expected AppliedAt between %s and %s, got %s", start, end, appliedAt)
 		}
-		if appliedAt.Location() != start.Location() {
-			t.Errorf("Expected AppliedAt time zone to be in time zone '%s'. Got '%s' instead", start.Location(), appliedAt.Location())
-		}
+		assertZonesMatch(t, start, appliedAt)
 
 		secondMigration := applied["2021-01-01 002"]
 		if secondMigration == nil {
@@ -436,5 +434,15 @@ func makeContactsMigrations() []*Migration {
 			INSERT INTO addresses (id, contact_id) VALUES (2, 1);
 			`,
 		},
+	}
+}
+
+// assertZonesMatch accepts two Times and fails the test if their time zones
+// don't match.
+func assertZonesMatch(t *testing.T, expected, actual time.Time) {
+	expectedName, expectedOffset := expected.Zone()
+	actualName, actualOffset := actual.Zone()
+	if expectedOffset != actualOffset {
+		t.Errorf("Expected Zone '%s' with offset %d. Got Zone '%s' with offset %d", expectedName, expectedOffset, actualName, actualOffset)
 	}
 }
