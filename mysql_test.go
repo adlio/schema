@@ -3,6 +3,7 @@ package schema
 import (
 	"testing"
 
+	// MySQL Driver
 	_ "github.com/go-sql-driver/mysql"
 )
 

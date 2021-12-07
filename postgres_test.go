@@ -2,6 +2,9 @@ package schema
 
 import (
 	"testing"
+
+	// Postgres Driver
+	_ "github.com/lib/pq"
 )
 
 // Interface verification that Postgres is a valid Dialect

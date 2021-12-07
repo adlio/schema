@@ -1,6 +1,11 @@
 package schema
 
-import "testing"
+import (
+	"testing"
+
+	// SQLite driver
+	_ "github.com/mattn/go-sqlite3"
+)
 
 // Interface verification that SQLite is a valid Dialect
 var (
