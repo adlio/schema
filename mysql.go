@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"hash/crc32"
 	"strings"
+	"time"
 )
 
 const mysqlLockSalt uint32 = 271192482
@@ -41,12 +42,35 @@ func (m mysqlDialect) InsertSQL(tableName string) string {
 		`, tableName)
 }
 
-func (m mysqlDialect) SelectSQL(tableName string) string {
-	return fmt.Sprintf(`
+// GetAppliedMigrations retrieves all data from the migrations tracking table
+//
+func (m mysqlDialect) GetAppliedMigrations(tx Queryer, tableName string) (migrations []*AppliedMigration, err error) {
+	migrations = make([]*AppliedMigration, 0)
+
+	query := fmt.Sprintf(`
 		SELECT id, checksum, execution_time_in_millis, applied_at
 		FROM %s
-		ORDER BY id ASC;
-	`, tableName)
+		ORDER BY id ASC`, tableName)
+	rows, err := tx.Query(query)
+	if err != nil {
+		return migrations, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		migration := AppliedMigration{}
+
+		var appliedAt mysqlTime
+		err = rows.Scan(&migration.ID, &migration.Checksum, &migration.ExecutionTimeInMillis, &appliedAt)
+		if err != nil {
+			err = fmt.Errorf("Failed to GetAppliedMigrations. Did somebody change the structure of the %s table?: %w", tableName, err)
+			return migrations, err
+		}
+		migration.AppliedAt = appliedAt.Value
+		migrations = append(migrations, &migration)
+	}
+
+	return migrations, err
 }
 
 // QuotedTableName returns the string value of the name of the migration
@@ -81,4 +105,33 @@ func (nsl nullMySQLLogger) Print(v ...interface{}) {
 	// Intentional no-op. The purpose of this class is to swallow/ignore
 	// the MySQL driver errors which occur while we're waiting for the Docker
 	// MySQL instance to start up.
+}
+
+type mysqlTime struct {
+	Value time.Time
+}
+
+func (t *mysqlTime) Scan(src interface{}) (err error) {
+	if src == nil {
+		t.Value = time.Time{}
+	}
+
+	if srcTime, isTime := src.(time.Time); isTime {
+		t.Value = srcTime.In(time.Local)
+		return nil
+	}
+
+	return t.ScanString(fmt.Sprintf("%s", src))
+}
+
+func (t *mysqlTime) ScanString(src string) (err error) {
+	switch len(src) {
+	case 19:
+		t.Value, err = time.ParseInLocation("2006-01-02 15:04:05", src, time.UTC)
+		if err != nil {
+			return err
+		}
+	}
+	t.Value = t.Value.In(time.Local)
+	return nil
 }

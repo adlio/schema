@@ -8,7 +8,7 @@ package schema
 type Dialect interface {
 	QuotedTableName(schemaName, tableName string) string
 	CreateSQL(tableName string) string
-	SelectSQL(tableName string) string
+	GetAppliedMigrations(tx Queryer, tableName string) (applied []*AppliedMigration, err error)
 	InsertSQL(tableName string) string
 }
 

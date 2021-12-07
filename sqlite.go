@@ -3,6 +3,7 @@ package schema
 import (
 	"fmt"
 	"strings"
+	"time"
 	"unicode"
 )
 
@@ -33,14 +34,34 @@ func (s *sqliteDialect) InsertSQL(tableName string) string {
 		`, tableName)
 }
 
-// SelectSQL takes the name of the migration tracking table and
-// returns the SQL statement to retrieve all records from it
-func (s sqliteDialect) SelectSQL(tableName string) string {
-	return fmt.Sprintf(`
+// GetAppliedMigrations retrieves all data from the migrations tracking table
+//
+func (p sqliteDialect) GetAppliedMigrations(tx Queryer, tableName string) (migrations []*AppliedMigration, err error) {
+	migrations = make([]*AppliedMigration, 0)
+
+	query := fmt.Sprintf(`
 		SELECT id, checksum, execution_time_in_millis, applied_at
 		FROM %s
 		ORDER BY id ASC
 	`, tableName)
+	rows, err := tx.Query(query)
+	if err != nil {
+		return migrations, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		migration := AppliedMigration{}
+		err = rows.Scan(&migration.ID, &migration.Checksum, &migration.ExecutionTimeInMillis, &migration.AppliedAt)
+		if err != nil {
+			err = fmt.Errorf("Failed to GetAppliedMigrations. Did somebody change the structure of the %s table?: %w", tableName, err)
+			return migrations, err
+		}
+		migration.AppliedAt = migration.AppliedAt.In(time.Local)
+		migrations = append(migrations, &migration)
+	}
+
+	return migrations, err
 }
 
 // QuotedTableName returns the string value of the name of the migration

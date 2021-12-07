@@ -2,6 +2,7 @@ package schema
 
 import (
 	"testing"
+	"time"
 
 	// MySQL Driver
 	_ "github.com/go-sql-driver/mysql"
@@ -49,4 +50,36 @@ func TestMySQLQuotedIdent(t *testing.T) {
 			t.Errorf("Expected %s, got %s", expected, actual)
 		}
 	}
+}
+
+func TestMySQLTimeScanner(t *testing.T) {
+	t.Run("Nil", func(t *testing.T) {
+		v := mysqlTime{}
+		err := v.Scan(nil)
+		if err != nil {
+			t.Error(err)
+		}
+	})
+
+	t.Run("Time In UTC", func(t *testing.T) {
+		v := mysqlTime{}
+		expected := time.Date(2021, 1, 1, 18, 19, 20, 0, time.UTC)
+		src, _ := time.ParseInLocation("2006-01-02 15:04:05", "2021-01-01 18:19:20", time.UTC)
+		err := v.Scan(src)
+		if err != nil {
+			t.Error(err)
+		}
+		assertZonesMatch(t, time.Now(), v.Value)
+		if expected.Unix() != v.Value.Unix() {
+			t.Errorf("Expected %s, got %s", expected.Format(time.RFC3339), v.Value.Format(time.RFC3339))
+		}
+	})
+
+	t.Run("Invalid String Time", func(t *testing.T) {
+		v := mysqlTime{}
+		err := v.Scan("2000-13-45 99:45:23")
+		if err == nil {
+			t.Errorf("Expected error scanning invalid time")
+		}
+	})
 }
