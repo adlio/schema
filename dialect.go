@@ -2,14 +2,14 @@ package schema
 
 import "context"
 
-// Dialect defines the minimal interface for a database dialect.
-// All interface functions take the customized table name
-// as input and return a SQL statement with placeholders
-// appropriate to the database.
-//
+// Dialect defines the minimal interface for a database dialect. All dialects
+// must implement functions to create the migrations table, get all applied
+// migrations, insert a new migration tracking record, and perform escaping
+// for the tracking table's name
 type Dialect interface {
 	QuotedTableName(schemaName, tableName string) string
-	CreateSQL(tableName string) string
+
+	CreateMigrationsTable(ctx context.Context, tx Queryer, tableName string) error
 	GetAppliedMigrations(ctx context.Context, tx Queryer, tableName string) (applied []*AppliedMigration, err error)
 	InsertSQL(tableName string) string
 }

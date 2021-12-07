@@ -33,14 +33,19 @@ func (m mysqlDialect) Unlock(ctx context.Context, tx Queryer, tableName string) 
 	return err
 }
 
-func (m mysqlDialect) CreateSQL(tableName string) string {
-	return fmt.Sprintf(`
+// CreateMigrationsTable implements the Dialect interface to create the
+// table which tracks applied migrations. It only creates the table if it
+// does not already exist
+func (m mysqlDialect) CreateMigrationsTable(ctx context.Context, tx Queryer, tableName string) error {
+	query := fmt.Sprintf(`
 		CREATE TABLE IF NOT EXISTS %s (
 			id VARCHAR(255) NOT NULL,
 			checksum VARCHAR(32) NOT NULL DEFAULT '',
 			execution_time_in_millis INTEGER NOT NULL DEFAULT 0,
 			applied_at TIMESTAMP NOT NULL
 		)`, tableName)
+	_, err := tx.ExecContext(ctx, query)
+	return err
 }
 
 func (m mysqlDialect) InsertSQL(tableName string) string {

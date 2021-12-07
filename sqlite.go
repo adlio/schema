@@ -13,16 +13,19 @@ var SQLite = &sqliteDialect{}
 
 type sqliteDialect struct{}
 
-// CreateSQL takes the name of the migration tracking table and
-// returns the SQL statement needed to create it
-func (s sqliteDialect) CreateSQL(tableName string) string {
-	return fmt.Sprintf(`
+// CreateMigrationsTable implements the Dialect interface to create the
+// table which tracks applied migrations. It only creates the table if it
+// does not already exist
+func (s sqliteDialect) CreateMigrationsTable(ctx context.Context, tx Queryer, tableName string) error {
+	query := fmt.Sprintf(`
 		CREATE TABLE IF NOT EXISTS %s (
 			id TEXT NOT NULL,
 			checksum TEXT NOT NULL DEFAULT '',
 			execution_time_in_millis INTEGER NOT NULL DEFAULT 0,
 			applied_at DATETIME
-		);`, tableName)
+		)`, tableName)
+	_, err := tx.ExecContext(ctx, query)
+	return err
 }
 
 // InsertSQL takes the name of the migration tracking table and

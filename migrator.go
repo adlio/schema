@@ -84,7 +84,7 @@ func (m *Migrator) createMigrationsTable(tx Queryer) {
 		// Abort if Migrator already had an error
 		return
 	}
-	_, m.err = tx.ExecContext(m.ctx, m.Dialect.CreateSQL(m.QuotedTableName()))
+	m.err = m.Dialect.CreateMigrationsTable(m.ctx, tx, m.QuotedTableName())
 }
 
 func (m *Migrator) lock(tx Queryer) {

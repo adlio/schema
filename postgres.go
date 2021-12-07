@@ -35,10 +35,11 @@ func (p postgresDialect) Unlock(ctx context.Context, tx Queryer, tableName strin
 	return err
 }
 
-// CreateSQL takes the name of the migration tracking table and
-// returns the SQL statement needed to create it
-func (p postgresDialect) CreateSQL(tableName string) string {
-	return fmt.Sprintf(`
+// CreateMigrationsTable implements the Dialect interface to create the
+// table which tracks applied migrations. It only creates the table if it
+// does not already exist
+func (p postgresDialect) CreateMigrationsTable(ctx context.Context, tx Queryer, tableName string) error {
+	query := fmt.Sprintf(`
 				CREATE TABLE IF NOT EXISTS %s (
 					id VARCHAR(255) NOT NULL,
 					checksum VARCHAR(32) NOT NULL DEFAULT '',
@@ -46,6 +47,8 @@ func (p postgresDialect) CreateSQL(tableName string) string {
 					applied_at TIMESTAMP WITH TIME ZONE NOT NULL
 				)
 			`, tableName)
+	_, err := tx.ExecContext(ctx, query)
+	return err
 }
 
 // InsertSQL takes the name of the migration tracking table and
