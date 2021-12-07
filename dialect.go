@@ -1,5 +1,7 @@
 package schema
 
+import "context"
+
 // Dialect defines the minimal interface for a database dialect.
 // All interface functions take the customized table name
 // as input and return a SQL statement with placeholders
@@ -8,7 +10,7 @@ package schema
 type Dialect interface {
 	QuotedTableName(schemaName, tableName string) string
 	CreateSQL(tableName string) string
-	GetAppliedMigrations(tx Queryer, tableName string) (applied []*AppliedMigration, err error)
+	GetAppliedMigrations(ctx context.Context, tx Queryer, tableName string) (applied []*AppliedMigration, err error)
 	InsertSQL(tableName string) string
 }
 

@@ -10,6 +10,9 @@ import (
 )
 
 var (
+	// ErrConnFailed indicates that the Conn() method failed (couldn't get a connection)
+	ErrConnFailed = fmt.Errorf("connect failed")
+
 	// ErrBeginFailed indicates that the Begin() method failed (couldn't start Tx)
 	ErrBeginFailed = fmt.Errorf("begin failed")
 
@@ -22,21 +25,17 @@ var (
 // verify the "right" failure occurred.
 type BadQueryer struct{}
 
-func (bq BadQueryer) Exec(sql string, args ...interface{}) (sql.Result, error) {
+func (bq BadQueryer) ExecContext(ctx context.Context, sql string, args ...interface{}) (sql.Result, error) {
 	return nil, fmt.Errorf("FAIL: %s", strings.TrimSpace(sql))
 }
 
-func (bq BadQueryer) Query(sql string, args ...interface{}) (*sql.Rows, error) {
+func (bq BadQueryer) QueryContext(ctx context.Context, sql string, args ...interface{}) (*sql.Rows, error) {
 	return nil, fmt.Errorf("FAIL: %s", strings.TrimSpace(sql))
 }
 
 // BadTransactor implements the Transactor interface with no-ops for Exec() and
 // Query(), and failures on all calls to Begin()
 type BadTransactor struct{}
-
-func (bt BadTransactor) Begin() (*sql.Tx, error) {
-	return nil, ErrBeginFailed
-}
 
 func (bt BadTransactor) BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error) {
 	return nil, ErrBeginFailed
@@ -47,22 +46,34 @@ func (bt BadTransactor) BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.
 //
 type BadConnection struct{}
 
-func (bc BadConnection) Begin() (*sql.Tx, error) {
-	return nil, ErrBeginFailed
-}
-
 func (bc BadConnection) BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error) {
 	return nil, ErrBeginFailed
 }
 
-func (bc BadConnection) Exec(sql string, args ...interface{}) (sql.Result, error) {
+func (bc BadConnection) ExecContext(ctx context.Context, sql string, args ...interface{}) (sql.Result, error) {
 	return nil, fmt.Errorf("FAIL: %s", strings.TrimSpace(sql))
 }
 
-func (bc BadConnection) Query(sql string, args ...interface{}) (*sql.Rows, error) {
+func (bc BadConnection) QueryContext(ctx context.Context, sql string, args ...interface{}) (*sql.Rows, error) {
 	return nil, fmt.Errorf("FAIL: %s", strings.TrimSpace(sql))
 }
 
+// BadDB implements the interface for the *sql.DB Conn() method in a way that
+// always fails
+type BadDB struct{}
+
+func (bd BadDB) Conn(ctx context.Context) (*sql.Conn, error) {
+	return nil, ErrConnFailed
+}
+
+func TestApplyWithBadDB(t *testing.T) {
+	bd := BadDB{}
+	migrator := NewMigrator()
+	err := migrator.Apply(bd, makeValidUnorderedMigrations())
+	if err != ErrConnFailed {
+		t.Errorf("Expected %v, got %v", ErrConnFailed, err)
+	}
+}
 func TestApplyWithNilDBProvidesHelpfulError(t *testing.T) {
 	withEachDialect(t, func(t *testing.T, d Dialect) {
 		migrator := NewMigrator(WithDialect(d))

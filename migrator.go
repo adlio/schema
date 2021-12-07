@@ -19,6 +19,8 @@ type Migrator struct {
 	// err holds the last error which occurred at any step of the migration
 	// process
 	err error
+
+	ctx context.Context
 }
 
 // NewMigrator creates a new Migrator with the supplied
@@ -27,6 +29,8 @@ func NewMigrator(options ...Option) Migrator {
 	m := Migrator{
 		TableName: DefaultTableName,
 		Dialect:   Postgres,
+		err:       nil,
+		ctx:       context.Background(),
 	}
 	for _, opt := range options {
 		m = opt(m)
@@ -36,17 +40,32 @@ func NewMigrator(options ...Option) Migrator {
 
 // Apply takes a slice of Migrations and applies any which have not yet
 // been applied
-func (m *Migrator) Apply(db Connection, migrations []*Migration) (err error) {
+func (m *Migrator) Apply(db DB, migrations []*Migration) (err error) {
+	return m.ApplyContext(context.Background(), db, migrations)
+}
+
+// ApplyContext takes a slice of Migrations and applies any which have not yet
+// been applied. The provided context will be used for the for connections
+// and queries made against the database.
+//
+func (m *Migrator) ApplyContext(ctx context.Context, db DB, migrations []*Migration) (err error) {
 	if db == nil {
 		return ErrNilDB
 	}
 
+	m.ctx = ctx
 	m.err = nil
 
-	m.lock(db)
-	defer m.unlock(db)
+	conn, err := db.Conn(m.ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
 
-	m.transaction(db, func(tx Queryer) {
+	m.lock(conn)
+	defer m.unlock(conn)
+
+	m.transaction(conn, func(tx Queryer) {
 		m.createMigrationsTable(tx)
 		m.run(tx, migrations)
 	})
@@ -65,7 +84,7 @@ func (m *Migrator) createMigrationsTable(tx Queryer) {
 		// Abort if Migrator already had an error
 		return
 	}
-	_, m.err = tx.Exec(m.Dialect.CreateSQL(m.QuotedTableName()))
+	_, m.err = tx.ExecContext(m.ctx, m.Dialect.CreateSQL(m.QuotedTableName()))
 }
 
 func (m *Migrator) lock(tx Queryer) {
@@ -75,7 +94,7 @@ func (m *Migrator) lock(tx Queryer) {
 	}
 	if l, isLocker := m.Dialect.(Locker); isLocker {
 		query := l.LockSQL(m.TableName)
-		_, err := tx.Exec(query)
+		_, err := tx.ExecContext(m.ctx, query)
 		if err == nil {
 			m.log("Locked at ", time.Now().Format(time.RFC3339Nano))
 		} else {
@@ -87,7 +106,7 @@ func (m *Migrator) lock(tx Queryer) {
 func (m *Migrator) unlock(tx Queryer) {
 	if l, isLocker := m.Dialect.(Locker); isLocker {
 		query := l.UnlockSQL(m.TableName)
-		_, err := tx.Exec(query)
+		_, err := tx.ExecContext(m.ctx, query)
 		if err == nil {
 			m.log("Unlocked at ", time.Now().Format(time.RFC3339Nano))
 		} else if m.err == nil {
@@ -142,7 +161,7 @@ func (m *Migrator) run(tx Queryer, migrations []*Migration) {
 
 func (m *Migrator) runMigration(tx Queryer, migration *Migration) (err error) {
 	startedAt := time.Now()
-	_, err = tx.Exec(migration.Script)
+	_, err = tx.ExecContext(m.ctx, migration.Script)
 	if err != nil {
 		return fmt.Errorf("Migration '%s' Failed:\n%w", migration.ID, err)
 	}
@@ -156,7 +175,8 @@ func (m *Migrator) runMigration(tx Queryer, migration *Migration) (err error) {
 		ms = 1
 	}
 
-	_, err = tx.Exec(
+	_, err = tx.ExecContext(
+		m.ctx,
 		m.Dialect.InsertSQL(m.QuotedTableName()),
 		migration.ID,
 		migration.MD5(),
@@ -181,7 +201,7 @@ func (m *Migrator) transaction(db Transactor, f func(Queryer)) {
 	}
 
 	var tx *sql.Tx
-	tx, m.err = db.BeginTx(context.Background(), &sql.TxOptions{Isolation: sql.LevelSerializable})
+	tx, m.err = db.BeginTx(m.ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
 	if m.err != nil {
 		return
 	}
