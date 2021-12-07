@@ -84,6 +84,15 @@ func TestApplyWithNilDBProvidesHelpfulError(t *testing.T) {
 	})
 }
 
+func TestApplyWithNoMigrations(t *testing.T) {
+	db, _, _ := sqlmock.New()
+	migrator := NewMigrator()
+	err := migrator.Apply(db, []*Migration{})
+	if err != nil {
+		t.Errorf("Expected no error when running no migrations, got %s", err)
+	}
+}
+
 func TestNilTransaction(t *testing.T) {
 	nt := Transactor(nil)
 	withEachDialect(t, func(t *testing.T, d Dialect) {

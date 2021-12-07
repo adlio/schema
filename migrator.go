@@ -51,6 +51,10 @@ func (m *Migrator) Apply(db DB, migrations []*Migration) (err error) {
 		return ErrNilDB
 	}
 
+	if len(migrations) == 0 {
+		return nil
+	}
+
 	if m.ctx == nil {
 		m.ctx = context.Background()
 	}
