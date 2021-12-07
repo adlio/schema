@@ -103,12 +103,14 @@ func (c *TestDB) DSN() string {
 	case SQLiteDriverName:
 		return c.Path()
 	case MySQLDriverName:
+		/**
+		 * Since we want the system to be compatible with both parseTime=true and
+		 * not, we use different querystrings with MariaDB and MySQL.
+		 */
 		if c.DockerRepo == "mariadb" {
 			return fmt.Sprintf("%s:%s@(localhost:%s)/%s?parseTime=true&multiStatements=true", c.Username(), c.Password(), c.Port(), c.DatabaseName())
-		} else {
-			return fmt.Sprintf("%s:%s@(localhost:%s)/%s?multiStatements=true", c.Username(), c.Password(), c.Port(), c.DatabaseName())
-
 		}
+		return fmt.Sprintf("%s:%s@(localhost:%s)/%s?multiStatements=true", c.Username(), c.Password(), c.Port(), c.DatabaseName())
 	}
 	// TODO Return error
 	return "NoDSN"
@@ -129,7 +131,7 @@ func (c *TestDB) Init(pool *dockertest.Pool) {
 
 		if c.Driver == MySQLDriverName {
 			// Disable logging for MySQL while we await startup of the Docker container
-			mysql.SetLogger(nullMySQLLogger{})
+			_ = mysql.SetLogger(nullMySQLLogger{})
 		}
 
 		// The container is started with AutoRemove: true, and a restart policy to
@@ -150,7 +152,7 @@ func (c *TestDB) Init(pool *dockertest.Pool) {
 		}
 
 		// Even if everything goes OK, kill off the container after n seconds
-		c.Resource.Expire(120)
+		_ = c.Resource.Expire(120)
 	}
 
 	// Regardless of whether the DB is docker-based on not, we use the pool's
@@ -174,7 +176,7 @@ func (c *TestDB) Init(pool *dockertest.Pool) {
 
 	if c.Driver == MySQLDriverName {
 		// Restore the default MySQL logger after we successfully connect
-		mysql.SetLogger(log.New(os.Stderr, "[mysql] ", log.Ldate|log.Ltime|log.Lshortfile))
+		_ = mysql.SetLogger(log.New(os.Stderr, "[mysql] ", log.Ldate|log.Ltime|log.Lshortfile))
 	}
 }
 

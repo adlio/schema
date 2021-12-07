@@ -7,6 +7,7 @@ import (
 	"unicode"
 )
 
+// SQLite is the dialect for sqlite3 databases
 var SQLite = &sqliteDialect{}
 
 type sqliteDialect struct{}
@@ -36,7 +37,7 @@ func (s *sqliteDialect) InsertSQL(tableName string) string {
 
 // GetAppliedMigrations retrieves all data from the migrations tracking table
 //
-func (p sqliteDialect) GetAppliedMigrations(tx Queryer, tableName string) (migrations []*AppliedMigration, err error) {
+func (s sqliteDialect) GetAppliedMigrations(tx Queryer, tableName string) (migrations []*AppliedMigration, err error) {
 	migrations = make([]*AppliedMigration, 0)
 
 	query := fmt.Sprintf(`

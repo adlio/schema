@@ -138,7 +138,8 @@ func TestFailedMigration(t *testing.T) {
 		if err == nil || !strings.Contains(err.Error(), "TIBBLE") {
 			t.Errorf("Expected explanatory error from failed migration. Got %v", err)
 		}
-		rows, _ := db.Query("SELECT * FROM " + migrator.QuotedTableName())
+		query := "SELECT * FROM " + migrator.QuotedTableName()
+		rows, _ := db.Query(query)
 
 		// We expect either an error (because the transaction was rolled back
 		// and the table no longer exists)... or  a query with no results
@@ -159,7 +160,7 @@ func TestFailedMigration(t *testing.T) {
 //
 func TestSimultaneousApply(t *testing.T) {
 	concurrency := 4
-	dataTable := fmt.Sprintf("data%d", rand.Int())
+	dataTable := fmt.Sprintf("data%d", rand.Int()) // #nosec we don't need cryptographic security here
 	migrationsTable := fmt.Sprintf("Migrations %s", time.Now().Format(time.RFC3339Nano))
 	sharedMigrations := []*Migration{
 		{
@@ -258,8 +259,8 @@ func TestMultiSchemaSupport(t *testing.T) {
 		for table, expectedRowCount := range expectedRowCounts {
 			qtn := tdb.Dialect.QuotedTableName("", table)
 			actualCount := -1 // Don't initialize to 0 because that's an expected value
-			sql := fmt.Sprintf("SELECT COUNT(*) FROM %s", qtn)
-			rows, err := db.Query(sql)
+			query := fmt.Sprintf("SELECT COUNT(*) FROM %s", qtn)
+			rows, err := db.Query(query)
 			if err != nil {
 				t.Error(err)
 			}

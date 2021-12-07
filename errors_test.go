@@ -51,7 +51,7 @@ func (bc BadConnection) Begin() (*sql.Tx, error) {
 	return nil, ErrBeginFailed
 }
 
-func (bt BadConnection) BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error) {
+func (bc BadConnection) BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error) {
 	return nil, ErrBeginFailed
 }
 

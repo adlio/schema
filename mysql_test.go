@@ -83,3 +83,11 @@ func TestMySQLTimeScanner(t *testing.T) {
 		}
 	})
 }
+
+type nullMySQLLogger struct{}
+
+func (nsl nullMySQLLogger) Print(v ...interface{}) {
+	// Intentional no-op. The purpose of this class is to swallow/ignore
+	// the MySQL driver errors which occur while we're waiting for the Docker
+	// MySQL instance to start up.
+}

@@ -9,6 +9,7 @@ import (
 
 const mysqlLockSalt uint32 = 271192482
 
+// MySQL is the dialect which should be used for MySQL/MariaDB databases
 var MySQL = mysqlDialect{}
 
 type mysqlDialect struct{}
@@ -97,14 +98,6 @@ func (m mysqlDialect) advisoryLockID(tableName string) string {
 	sum := crc32.ChecksumIEEE([]byte(tableName))
 	sum = sum * mysqlLockSalt
 	return fmt.Sprint(sum)
-}
-
-type nullMySQLLogger struct{}
-
-func (nsl nullMySQLLogger) Print(v ...interface{}) {
-	// Intentional no-op. The purpose of this class is to swallow/ignore
-	// the MySQL driver errors which occur while we're waiting for the Docker
-	// MySQL instance to start up.
 }
 
 type mysqlTime struct {
