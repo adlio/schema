@@ -28,15 +28,19 @@ func (s sqliteDialect) CreateMigrationsTable(ctx context.Context, tx Queryer, ta
 	return err
 }
 
-// InsertSQL takes the name of the migration tracking table and
-// returns the SQL statement needed to insert a migration into it
-func (s *sqliteDialect) InsertSQL(tableName string) string {
-	return fmt.Sprintf(`
+// InsertAppliedMigration implements the Dialect interface to insert a record
+// into the migrations tracking table *after* a migration has successfully
+// run.
+func (s *sqliteDialect) InsertAppliedMigration(ctx context.Context, tx Queryer, tableName string, am *AppliedMigration) error {
+	query := fmt.Sprintf(`
 		INSERT INTO %s
 		( id, checksum, execution_time_in_millis, applied_at )
 		VALUES
 		( ?, ?, ?, ? )
-		`, tableName)
+		`, tableName,
+	)
+	_, err := tx.ExecContext(ctx, query, am.ID, am.MD5(), am.ExecutionTimeInMillis, am.AppliedAt)
+	return err
 }
 
 // GetAppliedMigrations retrieves all data from the migrations tracking table

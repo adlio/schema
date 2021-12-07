@@ -150,18 +150,19 @@ func (m *Migrator) run(tx Queryer, migrations []*Migration) {
 	}
 
 	for _, migration := range plan {
-		m.err = m.runMigration(tx, migration)
+		m.runMigration(tx, migration)
 		if m.err != nil {
 			return
 		}
 	}
 }
 
-func (m *Migrator) runMigration(tx Queryer, migration *Migration) (err error) {
+func (m *Migrator) runMigration(tx Queryer, migration *Migration) {
 	startedAt := time.Now()
-	_, err = tx.ExecContext(m.ctx, migration.Script)
-	if err != nil {
-		return fmt.Errorf("Migration '%s' Failed:\n%w", migration.ID, err)
+	_, m.err = tx.ExecContext(m.ctx, migration.Script)
+	if m.err != nil {
+		m.err = fmt.Errorf("Migration '%s' Failed:\n%w", migration.ID, m.err)
+		return
 	}
 
 	executionTime := time.Since(startedAt)
@@ -173,15 +174,12 @@ func (m *Migrator) runMigration(tx Queryer, migration *Migration) (err error) {
 		ms = 1
 	}
 
-	_, err = tx.ExecContext(
-		m.ctx,
-		m.Dialect.InsertSQL(m.QuotedTableName()),
-		migration.ID,
-		migration.MD5(),
-		ms,
-		startedAt,
-	)
-	return err
+	applied := AppliedMigration{}
+	applied.ID = migration.ID
+	applied.Script = migration.Script
+	applied.ExecutionTimeInMillis = ms
+	applied.AppliedAt = startedAt
+	m.err = m.Dialect.InsertAppliedMigration(m.ctx, tx, m.QuotedTableName(), &applied)
 }
 
 // transaction wraps the supplied function in a transaction with the supplied

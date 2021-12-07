@@ -11,7 +11,7 @@ type Dialect interface {
 
 	CreateMigrationsTable(ctx context.Context, tx Queryer, tableName string) error
 	GetAppliedMigrations(ctx context.Context, tx Queryer, tableName string) (applied []*AppliedMigration, err error)
-	InsertSQL(tableName string) string
+	InsertAppliedMigration(ctx context.Context, tx Queryer, tableName string, migration *AppliedMigration) error
 }
 
 // Locker defines an optional Dialect extension for obtaining and releasing

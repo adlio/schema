@@ -16,7 +16,7 @@ type AppliedMigration struct {
 
 	// ExecutionTimeInMillis is populated after the migration is run, indicating
 	// how much time elapsed while the Script was executing.
-	ExecutionTimeInMillis int
+	ExecutionTimeInMillis int64
 
 	// AppliedAt is the time at which this particular migration's Script began
 	// executing (not when it completed executing).
