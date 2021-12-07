@@ -16,10 +16,6 @@ type Migrator struct {
 	Dialect    Dialect
 	Logger     Logger
 
-	// err holds the last error which occurred at any step of the migration
-	// process
-	err error
-
 	ctx context.Context
 }
 
@@ -29,7 +25,6 @@ func NewMigrator(options ...Option) Migrator {
 	m := Migrator{
 		TableName: DefaultTableName,
 		Dialect:   Postgres,
-		err:       nil,
 		ctx:       context.Background(),
 	}
 	for _, opt := range options {
@@ -45,8 +40,12 @@ func (m *Migrator) QuotedTableName() string {
 }
 
 // Apply takes a slice of Migrations and applies any which have not yet
-// been applied
+// been applied against the provided database. Apply can be re-called
+// sequentially with the same Migrations and different databases, but it is
+// not threadsafe... if concurrent applies are desired, multiple Migrators
+// should be used.
 func (m *Migrator) Apply(db DB, migrations []*Migration) (err error) {
+	// Reset state to begin the migration
 	if db == nil {
 		return ErrNilDB
 	}
@@ -58,58 +57,66 @@ func (m *Migrator) Apply(db DB, migrations []*Migration) (err error) {
 	if m.ctx == nil {
 		m.ctx = context.Background()
 	}
-	m.err = nil
+
+	// Obtain a concrete connection to the database which will be closed
+	// at the conclusion of Apply()
 	conn, err := db.Conn(m.ctx)
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
+	defer func() { err = coalesceErrs(err, conn.Close()) }()
 
-	m.lock(conn)
-	defer m.unlock(conn)
+	// If the database supports locking, obtain a lock around this migrator's
+	// table name with a deferred unlock. Go's defers run LIFO, so this deferred
+	// unlock will happen before the deferred conn.Close()
+	err = m.lock(conn)
+	if err != nil {
+		return err
+	}
+	defer func() { err = coalesceErrs(err, m.unlock(conn)) }()
 
-	m.transaction(conn, func(tx Queryer) {
-		m.createMigrationsTable(tx)
-		m.run(tx, migrations)
-	})
+	tx, err := conn.BeginTx(m.ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	if err != nil {
+		return err
+	}
 
-	return m.err
+	err = m.Dialect.CreateMigrationsTable(m.ctx, tx, m.QuotedTableName())
+	if err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+
+	err = m.run(tx, migrations)
+	if err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+
+	err = tx.Commit()
+
+	return err
 }
 
-func (m *Migrator) lock(tx Queryer) {
-	if m.err != nil {
-		// Abort if Migrator already had an error
-		return
-	}
+func (m *Migrator) lock(tx Queryer) error {
 	if l, isLocker := m.Dialect.(Locker); isLocker {
 		err := l.Lock(m.ctx, tx, m.QuotedTableName())
-		if err == nil {
-			m.log("Locked %s at ", m.QuotedTableName(), time.Now().Format(time.RFC3339Nano))
-		} else {
-			m.err = err
+		if err != nil {
+			return err
 		}
+		m.log("Locked %s at ", m.QuotedTableName(), time.Now().Format(time.RFC3339Nano))
 	}
+	return nil
 }
 
-func (m *Migrator) unlock(tx Queryer) {
+func (m *Migrator) unlock(tx Queryer) error {
 	if l, isLocker := m.Dialect.(Locker); isLocker {
 		err := l.Unlock(m.ctx, tx, m.TableName)
-		if err == nil {
-			m.log("Unlocked %s at ", m.QuotedTableName(), time.Now().Format(time.RFC3339Nano))
-		} else if m.err == nil {
-			// Only set the migrator error if we're not overwriting an
-			// earlier error
-			m.err = err
+		if err != nil {
+			return err
 		}
+		m.log("Unlocked %s at ", m.QuotedTableName(), time.Now().Format(time.RFC3339Nano))
 	}
-}
-
-func (m *Migrator) createMigrationsTable(tx Queryer) {
-	if m.err != nil {
-		// Abort without doing anything if the migrator had an earlier error
-		return
-	}
-	m.err = m.Dialect.CreateMigrationsTable(m.ctx, tx, m.QuotedTableName())
+	return nil
 }
 
 func (m *Migrator) computeMigrationPlan(tx Queryer, toRun []*Migration) (plan []*Migration, err error) {
@@ -129,37 +136,31 @@ func (m *Migrator) computeMigrationPlan(tx Queryer, toRun []*Migration) (plan []
 	return plan, err
 }
 
-func (m *Migrator) run(tx Queryer, migrations []*Migration) {
-	if m.err != nil {
-		// Abort if Migrator already had an error
-		return
-	}
-
+func (m *Migrator) run(tx Queryer, migrations []*Migration) error {
 	if tx == nil {
-		m.err = ErrNilDB
-		return
+		return ErrNilDB
 	}
 
-	var plan []*Migration
-	plan, m.err = m.computeMigrationPlan(tx, migrations)
-	if m.err != nil {
-		return
+	plan, err := m.computeMigrationPlan(tx, migrations)
+	if err != nil {
+		return err
 	}
 
 	for _, migration := range plan {
-		m.runMigration(tx, migration)
-		if m.err != nil {
-			return
+		err = m.runMigration(tx, migration)
+		if err != nil {
+			return err
 		}
 	}
+
+	return nil
 }
 
-func (m *Migrator) runMigration(tx Queryer, migration *Migration) {
+func (m *Migrator) runMigration(tx Queryer, migration *Migration) error {
 	startedAt := time.Now()
-	_, m.err = tx.ExecContext(m.ctx, migration.Script)
-	if m.err != nil {
-		m.err = fmt.Errorf("Migration '%s' Failed:\n%w", migration.ID, m.err)
-		return
+	_, err := tx.ExecContext(m.ctx, migration.Script)
+	if err != nil {
+		return fmt.Errorf("Migration '%s' Failed:\n%w", migration.ID, err)
 	}
 
 	executionTime := time.Since(startedAt)
@@ -176,53 +177,20 @@ func (m *Migrator) runMigration(tx Queryer, migration *Migration) {
 	applied.Script = migration.Script
 	applied.ExecutionTimeInMillis = ms
 	applied.AppliedAt = startedAt
-	m.err = m.Dialect.InsertAppliedMigration(m.ctx, tx, m.QuotedTableName(), &applied)
-}
-
-// transaction wraps the supplied function in a transaction with the supplied
-// database connection
-//
-func (m *Migrator) transaction(db Transactor, f func(Queryer)) {
-	if db == nil {
-		m.err = ErrNilDB
-		return
-	}
-
-	if m.err != nil {
-		// Abort if Migrator already had an error
-		return
-	}
-
-	var tx *sql.Tx
-	tx, m.err = db.BeginTx(m.ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
-	if m.err != nil {
-		return
-	}
-
-	defer func() {
-		if p := recover(); p != nil {
-			switch p := p.(type) {
-			case error:
-				m.err = p
-			default:
-				m.err = fmt.Errorf("%s", p)
-			}
-		}
-		if m.err != nil {
-			if tx != nil {
-				_ = tx.Rollback()
-			}
-			return
-		} else if tx != nil {
-			m.err = tx.Commit()
-		}
-	}()
-
-	f(tx)
+	return m.Dialect.InsertAppliedMigration(m.ctx, tx, m.QuotedTableName(), &applied)
 }
 
 func (m *Migrator) log(msgs ...interface{}) {
 	if m.Logger != nil {
 		m.Logger.Print(msgs...)
 	}
+}
+
+func coalesceErrs(errs ...error) error {
+	for _, err := range errs {
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
