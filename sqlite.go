@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -37,7 +38,7 @@ func (s *sqliteDialect) InsertSQL(tableName string) string {
 
 // GetAppliedMigrations retrieves all data from the migrations tracking table
 //
-func (s sqliteDialect) GetAppliedMigrations(tx Queryer, tableName string) (migrations []*AppliedMigration, err error) {
+func (s sqliteDialect) GetAppliedMigrations(ctx context.Context, tx Queryer, tableName string) (migrations []*AppliedMigration, err error) {
 	migrations = make([]*AppliedMigration, 0)
 
 	query := fmt.Sprintf(`
@@ -45,7 +46,7 @@ func (s sqliteDialect) GetAppliedMigrations(tx Queryer, tableName string) (migra
 		FROM %s
 		ORDER BY id ASC
 	`, tableName)
-	rows, err := tx.Query(query)
+	rows, err := tx.QueryContext(ctx, query)
 	if err != nil {
 		return migrations, err
 	}

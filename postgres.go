@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"context"
 	"fmt"
 	"hash/crc32"
 	"strings"
@@ -54,14 +55,14 @@ func (p postgresDialect) InsertSQL(tableName string) string {
 
 // GetAppliedMigrations retrieves all data from the migrations tracking table
 //
-func (p postgresDialect) GetAppliedMigrations(tx Queryer, tableName string) (migrations []*AppliedMigration, err error) {
+func (p postgresDialect) GetAppliedMigrations(ctx context.Context, tx Queryer, tableName string) (migrations []*AppliedMigration, err error) {
 	migrations = make([]*AppliedMigration, 0)
 
 	query := fmt.Sprintf(`
 		SELECT id, checksum, execution_time_in_millis, applied_at
 		FROM %s ORDER BY id ASC
 	`, tableName)
-	rows, err := tx.Query(query)
+	rows, err := tx.QueryContext(ctx, query)
 	if err != nil {
 		return migrations, err
 	}

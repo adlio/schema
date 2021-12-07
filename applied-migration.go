@@ -30,7 +30,7 @@ func (m Migrator) GetAppliedMigrations(db Queryer) (applied map[string]*AppliedM
 	applied = make(map[string]*AppliedMigration)
 
 	// Get the raw data from the Dialect
-	migrations, err := m.Dialect.GetAppliedMigrations(db, m.QuotedTableName())
+	migrations, err := m.Dialect.GetAppliedMigrations(m.ctx, db, m.QuotedTableName())
 	if err != nil {
 		err = fmt.Errorf("Failed to GetAppliedMigrations. Did somebody change the structure of the %s table? %w", m.QuotedTableName(), err)
 		return applied, err
