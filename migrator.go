@@ -93,10 +93,9 @@ func (m *Migrator) lock(tx Queryer) {
 		return
 	}
 	if l, isLocker := m.Dialect.(Locker); isLocker {
-		query := l.LockSQL(m.TableName)
-		_, err := tx.ExecContext(m.ctx, query)
+		err := l.Lock(m.ctx, tx, m.QuotedTableName())
 		if err == nil {
-			m.log("Locked at ", time.Now().Format(time.RFC3339Nano))
+			m.log("Locked %s at ", m.QuotedTableName(), time.Now().Format(time.RFC3339Nano))
 		} else {
 			m.err = err
 		}
@@ -105,10 +104,9 @@ func (m *Migrator) lock(tx Queryer) {
 
 func (m *Migrator) unlock(tx Queryer) {
 	if l, isLocker := m.Dialect.(Locker); isLocker {
-		query := l.UnlockSQL(m.TableName)
-		_, err := tx.ExecContext(m.ctx, query)
+		err := l.Unlock(m.ctx, tx, m.TableName)
 		if err == nil {
-			m.log("Unlocked at ", time.Now().Format(time.RFC3339Nano))
+			m.log("Unlocked %s at ", m.QuotedTableName(), time.Now().Format(time.RFC3339Nano))
 		} else if m.err == nil {
 			// Only set the migrator error if we're not overwriting an
 			// earlier error

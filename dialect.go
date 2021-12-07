@@ -18,6 +18,6 @@ type Dialect interface {
 // a global database lock during the running of migrations. This feature is
 // supported by PostgreSQL and MySQL, but not SQLite.
 type Locker interface {
-	LockSQL(tableName string) string
-	UnlockSQL(tableName string) string
+	Lock(ctx context.Context, tx Queryer, tableName string) error
+	Unlock(ctx context.Context, tx Queryer, tableName string) error
 }

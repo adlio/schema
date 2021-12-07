@@ -17,14 +17,22 @@ var Postgres = postgresDialect{}
 
 type postgresDialect struct{}
 
-func (p postgresDialect) LockSQL(tableName string) string {
+// Lock implements the Locker interface to obtain a global lock before the
+// migrations are run.
+func (p postgresDialect) Lock(ctx context.Context, tx Queryer, tableName string) error {
 	lockID := p.advisoryLockID(tableName)
-	return fmt.Sprintf("SELECT pg_advisory_lock(%s)", lockID)
+	query := fmt.Sprintf("SELECT pg_advisory_lock(%s)", lockID)
+	_, err := tx.ExecContext(ctx, query)
+	return err
 }
 
-func (p postgresDialect) UnlockSQL(tableName string) string {
+// Unlock implements the Locker interface to release the global lock after the
+// migrations are run.
+func (p postgresDialect) Unlock(ctx context.Context, tx Queryer, tableName string) error {
 	lockID := p.advisoryLockID(tableName)
-	return fmt.Sprintf("SELECT pg_advisory_unlock(%s)", lockID)
+	query := fmt.Sprintf("SELECT pg_advisory_unlock(%s)", lockID)
+	_, err := tx.ExecContext(ctx, query)
+	return err
 }
 
 // CreateSQL takes the name of the migration tracking table and

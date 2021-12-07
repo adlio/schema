@@ -15,14 +15,22 @@ var MySQL = mysqlDialect{}
 
 type mysqlDialect struct{}
 
-func (m mysqlDialect) LockSQL(tableName string) string {
+// Lock implements the Locker interface to obtain a global lock before the
+// migrations are run.
+func (m mysqlDialect) Lock(ctx context.Context, tx Queryer, tableName string) error {
 	lockID := m.advisoryLockID(tableName)
-	return fmt.Sprintf(`SELECT GET_LOCK(%s, 10)`, lockID)
+	query := fmt.Sprintf(`SELECT GET_LOCK(%s, 10)`, lockID)
+	_, err := tx.ExecContext(ctx, query)
+	return err
 }
 
-func (m mysqlDialect) UnlockSQL(tableName string) string {
+// Unlock implements the Locker interface to release the global lock after the
+// migrations are run.
+func (m mysqlDialect) Unlock(ctx context.Context, tx Queryer, tableName string) error {
 	lockID := m.advisoryLockID(tableName)
-	return fmt.Sprintf(`SELECT RELEASE_LOCK(%s)`, lockID)
+	query := fmt.Sprintf(`SELECT RELEASE_LOCK(%s)`, lockID)
+	_, err := tx.ExecContext(ctx, query)
+	return err
 }
 
 func (m mysqlDialect) CreateSQL(tableName string) string {
