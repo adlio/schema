@@ -38,24 +38,23 @@ func NewMigrator(options ...Option) Migrator {
 	return m
 }
 
+// QuotedTableName returns the dialect-quoted fully-qualified name for the
+// migrations tracking table
+func (m *Migrator) QuotedTableName() string {
+	return m.Dialect.QuotedTableName(m.SchemaName, m.TableName)
+}
+
 // Apply takes a slice of Migrations and applies any which have not yet
 // been applied
 func (m *Migrator) Apply(db DB, migrations []*Migration) (err error) {
-	return m.ApplyContext(context.Background(), db, migrations)
-}
-
-// ApplyContext takes a slice of Migrations and applies any which have not yet
-// been applied. The provided context will be used for the for connections
-// and queries made against the database.
-//
-func (m *Migrator) ApplyContext(ctx context.Context, db DB, migrations []*Migration) (err error) {
 	if db == nil {
 		return ErrNilDB
 	}
 
-	m.ctx = ctx
+	if m.ctx == nil {
+		m.ctx = context.Background()
+	}
 	m.err = nil
-
 	conn, err := db.Conn(m.ctx)
 	if err != nil {
 		return err
@@ -71,20 +70,6 @@ func (m *Migrator) ApplyContext(ctx context.Context, db DB, migrations []*Migrat
 	})
 
 	return m.err
-}
-
-// QuotedTableName returns the dialect-quoted fully-qualified name for the
-// migrations tracking table
-func (m *Migrator) QuotedTableName() string {
-	return m.Dialect.QuotedTableName(m.SchemaName, m.TableName)
-}
-
-func (m *Migrator) createMigrationsTable(tx Queryer) {
-	if m.err != nil {
-		// Abort if Migrator already had an error
-		return
-	}
-	m.err = m.Dialect.CreateMigrationsTable(m.ctx, tx, m.QuotedTableName())
 }
 
 func (m *Migrator) lock(tx Queryer) {
@@ -113,6 +98,14 @@ func (m *Migrator) unlock(tx Queryer) {
 			m.err = err
 		}
 	}
+}
+
+func (m *Migrator) createMigrationsTable(tx Queryer) {
+	if m.err != nil {
+		// Abort without doing anything if the migrator had an earlier error
+		return
+	}
+	m.err = m.Dialect.CreateMigrationsTable(m.ctx, tx, m.QuotedTableName())
 }
 
 func (m *Migrator) computeMigrationPlan(tx Queryer, toRun []*Migration) (plan []*Migration, err error) {

@@ -68,7 +68,7 @@ func (bd BadDB) Conn(ctx context.Context) (*sql.Conn, error) {
 
 func TestApplyWithBadDB(t *testing.T) {
 	bd := BadDB{}
-	migrator := NewMigrator()
+	migrator := Migrator{}
 	err := migrator.Apply(bd, makeValidUnorderedMigrations())
 	if err != ErrConnFailed {
 		t.Errorf("Expected %v, got %v", ErrConnFailed, err)

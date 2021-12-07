@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -59,6 +60,18 @@ func TestWithDialectOption(t *testing.T) {
 	}
 	if m.Dialect != nil {
 		t.Errorf("Expected Option to not modify the original Migrator's Dialect, but it changed it to '%v'.", m.Dialect)
+	}
+}
+
+func TestWithContextOption(t *testing.T) {
+	m := NewMigrator()
+	if m.ctx == nil {
+		t.Errorf("Expected NewMigrator to set a default .ctx")
+	}
+	ctx := context.WithValue(context.Background(), "key", "value")
+	m = NewMigrator(WithContext(ctx))
+	if m.ctx != ctx {
+		t.Errorf("Expected WithContext to set a custom context")
 	}
 }
 
