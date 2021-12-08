@@ -1,7 +1,6 @@
 package schema
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
@@ -59,11 +58,9 @@ func TestGetAppliedMigrationsHasFriendlyScanError(t *testing.T) {
 		// Build a rowset that is completely different than the AppliedMigration
 		// struct is expecting to force a Scan error
 		rows := sqlmock.NewRows([]string{"nonsense", "column", "names"}).AddRow(1, "trash", "data")
-		mock.ExpectQuery("").RowsWillBeClosed().WillReturnRows(rows)
+		mock.ExpectQuery("^SELECT").RowsWillBeClosed().WillReturnRows(rows)
 
 		_, err = migrator.GetAppliedMigrations(db)
-		if err == nil || !strings.Contains(err.Error(), migrator.TableName) {
-			t.Errorf("Expected an error referencing the schema_migrations table's name, got %s", err)
-		}
+		expectErrorContains(t, err, migrator.TableName)
 	})
 }

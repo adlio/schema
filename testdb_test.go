@@ -8,7 +8,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/go-sql-driver/mysql"
 	"github.com/ory/dockertest"
 	"github.com/ory/dockertest/docker"
 )
@@ -129,11 +128,6 @@ func (c *TestDB) Init(pool *dockertest.Pool) {
 		// launch a container for this test run.
 		log.Printf("Starting docker container %s:%s\n", c.DockerRepo, c.DockerTag)
 
-		if c.Driver == MySQLDriverName {
-			// Disable logging for MySQL while we await startup of the Docker container
-			_ = mysql.SetLogger(nullMySQLLogger{})
-		}
-
 		// The container is started with AutoRemove: true, and a restart policy to
 		// not restart
 		c.Resource, err = pool.RunWithOptions(&dockertest.RunOptions{
@@ -172,11 +166,6 @@ func (c *TestDB) Init(pool *dockertest.Pool) {
 		log.Fatalf("Could not connect to %s: %s", c.DSN(), err)
 	} else {
 		log.Printf("Successfully connected to %s", c.DSN())
-	}
-
-	if c.Driver == MySQLDriverName {
-		// Restore the default MySQL logger after we successfully connect
-		_ = mysql.SetLogger(log.New(os.Stderr, "[mysql] ", log.Ldate|log.Ltime|log.Lshortfile))
 	}
 }
 

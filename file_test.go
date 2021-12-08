@@ -1,19 +1,61 @@
 package schema
 
 import (
+	"embed"
 	"errors"
+	"io/fs"
 	"os"
 	"testing"
+	"testing/fstest"
 )
 
-func TestMigrationFromFilePath(t *testing.T) {
-	migration, err := MigrationFromFilePath("./example-migrations/2019-01-01 0900 Create Users.sql")
-	if migration.Script != "CREATE TABLE users (id INTEGER NOT NULL PRIMARY KEY);" {
-		t.Error("Failed to get correct contents of migration")
-	}
+//go:embed example-migrations
+var exampleMigrations embed.FS
+
+func TestMigrationsFromEmbedFS(t *testing.T) {
+	migrations, err := FSMigrations(exampleMigrations, "example-migrations")
 	if err != nil {
 		t.Error(err)
 	}
+
+	expectedCount := 2
+	if len(migrations) != expectedCount {
+		t.Errorf("Expected %d migrations, got %d", expectedCount, len(migrations))
+	}
+
+	SortMigrations(migrations)
+	expectID(t, migrations[0], "2019-01-01 0900 Create Users")
+	expectScriptMatch(t, migrations[0], `^CREATE TABLE users`)
+	expectID(t, migrations[1], "2019-01-03 1000 Create Affiliates")
+	expectScriptMatch(t, migrations[1], `^CREATE TABLE affiliates`)
+}
+
+func TestMigrationsWithInvalidGlob(t *testing.T) {
+	_, err := FSMigrations(exampleMigrations, "/a/path[]with/bad/glob/pattern")
+	expectErrorContains(t, err, "/a/path[]with/bad/glob/pattern")
+}
+
+func TestFSMigrationsWithInvalidFiles(t *testing.T) {
+	testfs := fstest.MapFS{
+		"invalid-migrations": &fstest.MapFile{
+			Mode: fs.ModeDir,
+		},
+		"invalid-migrations/real.sql": &fstest.MapFile{
+			Data: []byte("File contents"),
+		},
+		"invalid-migrations/fake.sql": nil,
+	}
+	_, err := FSMigrations(testfs, "invalid-migrations")
+	expectErrorContains(t, err, "fake.sql")
+}
+
+func TestMigrationFromFilePath(t *testing.T) {
+	migration, err := MigrationFromFilePath("./example-migrations/2019-01-01 0900 Create Users.sql")
+	if err != nil {
+		t.Error(err)
+	}
+	expectID(t, migration, "2019-01-01 0900 Create Users")
+	expectScriptMatch(t, migration, `^CREATE TABLE users`)
 }
 
 func TestMigrationFromFilePathWithInvalidPath(t *testing.T) {
@@ -32,26 +74,18 @@ func TestMigrationFromFile(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if migration.ID != "2019-01-01 0900 Create Users" {
-		t.Errorf("Incorrect ID: %s", migration.ID)
-	}
-	if migration.Script != "CREATE TABLE users (id INTEGER NOT NULL PRIMARY KEY);" {
-		t.Errorf("Incorrect Script: %s", migration.Script)
-	}
+	expectID(t, migration, "2019-01-01 0900 Create Users")
+	expectScriptMatch(t, migration, `^CREATE TABLE users`)
 }
 
 func TestMigrationsFromDirectoryPath(t *testing.T) {
 	migrations, err := MigrationsFromDirectoryPath("./example-migrations")
-	SortMigrations(migrations)
 	if err != nil {
 		t.Error(err)
 	}
-	if migrations[0].ID != "2019-01-01 0900 Create Users" {
-		t.Errorf("Incorrect ID: %s", migrations[0].ID)
-	}
-	if migrations[1].ID != "2019-01-03 1000 Create Affiliates" {
-		t.Errorf("Incorrect ID: %s", migrations[1].ID)
-	}
+	SortMigrations(migrations)
+	expectID(t, migrations[0], "2019-01-01 0900 Create Users")
+	expectID(t, migrations[1], "2019-01-03 1000 Create Affiliates")
 }
 
 func TestMigrationsFromDirectoryPathThrowsErrorForInvalidDirectory(t *testing.T) {

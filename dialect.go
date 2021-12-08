@@ -1,21 +1,23 @@
 package schema
 
-// Dialect defines the minimal interface for a database dialect.
-// All interface functions take the customized table name
-// as input and return a SQL statement with placeholders
-// appropriate to the database.
-//
+import "context"
+
+// Dialect defines the minimal interface for a database dialect. All dialects
+// must implement functions to create the migrations table, get all applied
+// migrations, insert a new migration tracking record, and perform escaping
+// for the tracking table's name
 type Dialect interface {
 	QuotedTableName(schemaName, tableName string) string
-	CreateSQL(tableName string) string
-	GetAppliedMigrations(tx Queryer, tableName string) (applied []*AppliedMigration, err error)
-	InsertSQL(tableName string) string
+
+	CreateMigrationsTable(ctx context.Context, tx Queryer, tableName string) error
+	GetAppliedMigrations(ctx context.Context, tx Queryer, tableName string) (applied []*AppliedMigration, err error)
+	InsertAppliedMigration(ctx context.Context, tx Queryer, tableName string, migration *AppliedMigration) error
 }
 
 // Locker defines an optional Dialect extension for obtaining and releasing
 // a global database lock during the running of migrations. This feature is
 // supported by PostgreSQL and MySQL, but not SQLite.
 type Locker interface {
-	LockSQL(tableName string) string
-	UnlockSQL(tableName string) string
+	Lock(ctx context.Context, tx Queryer, tableName string) error
+	Unlock(ctx context.Context, tx Queryer, tableName string) error
 }

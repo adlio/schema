@@ -1,6 +1,9 @@
 package schema
 
-import "testing"
+import (
+	"regexp"
+	"testing"
+)
 
 func TestMD5(t *testing.T) {
 	testMigration := Migration{Script: "test"}
@@ -22,5 +25,21 @@ func TestSortMigrations(t *testing.T) {
 		if migration.ID != expectedOrder[i] {
 			t.Errorf("Expected migration #%d to be %s, got %s", i, expectedOrder[i], migration.ID)
 		}
+	}
+}
+
+func expectID(t *testing.T, migration *Migration, expectedID string) {
+	if migration.ID != expectedID {
+		t.Errorf("Expected Migration to have ID '%s', got '%s' instead", expectedID, migration.ID)
+	}
+}
+
+func expectScriptMatch(t *testing.T, migration *Migration, regexpString string) {
+	re, err := regexp.Compile(regexpString)
+	if err != nil {
+		t.Fatalf("Invalid regexp: '%s': %s", regexpString, err)
+	}
+	if !re.MatchString(migration.Script) {
+		t.Errorf("Expected migration Script to match '%s', but it did not. Script was:\n%s", regexpString, migration.Script)
 	}
 }

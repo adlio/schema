@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -12,32 +13,39 @@ var SQLite = &sqliteDialect{}
 
 type sqliteDialect struct{}
 
-// CreateSQL takes the name of the migration tracking table and
-// returns the SQL statement needed to create it
-func (s sqliteDialect) CreateSQL(tableName string) string {
-	return fmt.Sprintf(`
+// CreateMigrationsTable implements the Dialect interface to create the
+// table which tracks applied migrations. It only creates the table if it
+// does not already exist
+func (s sqliteDialect) CreateMigrationsTable(ctx context.Context, tx Queryer, tableName string) error {
+	query := fmt.Sprintf(`
 		CREATE TABLE IF NOT EXISTS %s (
 			id TEXT NOT NULL,
 			checksum TEXT NOT NULL DEFAULT '',
 			execution_time_in_millis INTEGER NOT NULL DEFAULT 0,
 			applied_at DATETIME
-		);`, tableName)
+		)`, tableName)
+	_, err := tx.ExecContext(ctx, query)
+	return err
 }
 
-// InsertSQL takes the name of the migration tracking table and
-// returns the SQL statement needed to insert a migration into it
-func (s *sqliteDialect) InsertSQL(tableName string) string {
-	return fmt.Sprintf(`
+// InsertAppliedMigration implements the Dialect interface to insert a record
+// into the migrations tracking table *after* a migration has successfully
+// run.
+func (s *sqliteDialect) InsertAppliedMigration(ctx context.Context, tx Queryer, tableName string, am *AppliedMigration) error {
+	query := fmt.Sprintf(`
 		INSERT INTO %s
 		( id, checksum, execution_time_in_millis, applied_at )
 		VALUES
 		( ?, ?, ?, ? )
-		`, tableName)
+		`, tableName,
+	)
+	_, err := tx.ExecContext(ctx, query, am.ID, am.MD5(), am.ExecutionTimeInMillis, am.AppliedAt)
+	return err
 }
 
 // GetAppliedMigrations retrieves all data from the migrations tracking table
 //
-func (s sqliteDialect) GetAppliedMigrations(tx Queryer, tableName string) (migrations []*AppliedMigration, err error) {
+func (s sqliteDialect) GetAppliedMigrations(ctx context.Context, tx Queryer, tableName string) (migrations []*AppliedMigration, err error) {
 	migrations = make([]*AppliedMigration, 0)
 
 	query := fmt.Sprintf(`
@@ -45,7 +53,7 @@ func (s sqliteDialect) GetAppliedMigrations(tx Queryer, tableName string) (migra
 		FROM %s
 		ORDER BY id ASC
 	`, tableName)
-	rows, err := tx.Query(query)
+	rows, err := tx.QueryContext(ctx, query)
 	if err != nil {
 		return migrations, err
 	}

@@ -8,6 +8,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/go-sql-driver/mysql"
 	"github.com/ory/dockertest"
 )
 
@@ -22,6 +23,11 @@ func TestMain(m *testing.M) {
 		log.Fatalf("Can't run schema tests. Docker is not running: %s", err)
 	}
 
+	// Disable logging for MySQL while we await startup of the Docker containero
+	// This avoids "[mysql] unexpected EOF" logging input during the delay
+	// while the docker containers launch
+	_ = mysql.SetLogger(nullMySQLLogger{})
+
 	var wg sync.WaitGroup
 	for name := range TestDBs {
 		testDB := TestDBs[name]
@@ -32,6 +38,10 @@ func TestMain(m *testing.M) {
 		}()
 	}
 	wg.Wait()
+
+	// Restore the default MySQL logger after we successfully connect
+	// So that MySQL Driver errors appear as expected
+	_ = mysql.SetLogger(log.New(os.Stderr, "[mysql] ", log.Ldate|log.Ltime|log.Lshortfile))
 
 	code := m.Run()
 

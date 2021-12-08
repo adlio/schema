@@ -16,7 +16,7 @@ type AppliedMigration struct {
 
 	// ExecutionTimeInMillis is populated after the migration is run, indicating
 	// how much time elapsed while the Script was executing.
-	ExecutionTimeInMillis int
+	ExecutionTimeInMillis int64
 
 	// AppliedAt is the time at which this particular migration's Script began
 	// executing (not when it completed executing).
@@ -30,7 +30,7 @@ func (m Migrator) GetAppliedMigrations(db Queryer) (applied map[string]*AppliedM
 	applied = make(map[string]*AppliedMigration)
 
 	// Get the raw data from the Dialect
-	migrations, err := m.Dialect.GetAppliedMigrations(db, m.QuotedTableName())
+	migrations, err := m.Dialect.GetAppliedMigrations(m.ctx, db, m.QuotedTableName())
 	if err != nil {
 		err = fmt.Errorf("Failed to GetAppliedMigrations. Did somebody change the structure of the %s table? %w", m.QuotedTableName(), err)
 		return applied, err

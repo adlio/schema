@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"context"
 	"fmt"
 	"hash/crc32"
 	"strings"
@@ -16,20 +17,29 @@ var Postgres = postgresDialect{}
 
 type postgresDialect struct{}
 
-func (p postgresDialect) LockSQL(tableName string) string {
+// Lock implements the Locker interface to obtain a global lock before the
+// migrations are run.
+func (p postgresDialect) Lock(ctx context.Context, tx Queryer, tableName string) error {
 	lockID := p.advisoryLockID(tableName)
-	return fmt.Sprintf("SELECT pg_advisory_lock(%s)", lockID)
+	query := fmt.Sprintf("SELECT pg_advisory_lock(%s)", lockID)
+	_, err := tx.ExecContext(ctx, query)
+	return err
 }
 
-func (p postgresDialect) UnlockSQL(tableName string) string {
+// Unlock implements the Locker interface to release the global lock after the
+// migrations are run.
+func (p postgresDialect) Unlock(ctx context.Context, tx Queryer, tableName string) error {
 	lockID := p.advisoryLockID(tableName)
-	return fmt.Sprintf("SELECT pg_advisory_unlock(%s)", lockID)
+	query := fmt.Sprintf("SELECT pg_advisory_unlock(%s)", lockID)
+	_, err := tx.ExecContext(ctx, query)
+	return err
 }
 
-// CreateSQL takes the name of the migration tracking table and
-// returns the SQL statement needed to create it
-func (p postgresDialect) CreateSQL(tableName string) string {
-	return fmt.Sprintf(`
+// CreateMigrationsTable implements the Dialect interface to create the
+// table which tracks applied migrations. It only creates the table if it
+// does not already exist
+func (p postgresDialect) CreateMigrationsTable(ctx context.Context, tx Queryer, tableName string) error {
+	query := fmt.Sprintf(`
 				CREATE TABLE IF NOT EXISTS %s (
 					id VARCHAR(255) NOT NULL,
 					checksum VARCHAR(32) NOT NULL DEFAULT '',
@@ -37,31 +47,35 @@ func (p postgresDialect) CreateSQL(tableName string) string {
 					applied_at TIMESTAMP WITH TIME ZONE NOT NULL
 				)
 			`, tableName)
+	_, err := tx.ExecContext(ctx, query)
+	return err
 }
 
-// InsertSQL takes the name of the migration tracking table and
-// returns the SQL statement needed to insert a migration into it
-func (p postgresDialect) InsertSQL(tableName string) string {
-	return fmt.Sprintf(`
-				INSERT INTO %s
-				( id, checksum, execution_time_in_millis, applied_at )
-				VALUES
-				( $1, $2, $3, $4 )
-				`,
+// InsertAppliedMigration implements the Dialect interface to insert a record
+// into the migrations tracking table *after* a migration has successfully
+// run.
+func (p postgresDialect) InsertAppliedMigration(ctx context.Context, tx Queryer, tableName string, am *AppliedMigration) error {
+	query := fmt.Sprintf(`
+		INSERT INTO %s
+		( id, checksum, execution_time_in_millis, applied_at )
+		VALUES
+		( $1, $2, $3, $4 )`,
 		tableName,
 	)
+	_, err := tx.ExecContext(ctx, query, am.ID, am.MD5(), am.ExecutionTimeInMillis, am.AppliedAt)
+	return err
 }
 
 // GetAppliedMigrations retrieves all data from the migrations tracking table
 //
-func (p postgresDialect) GetAppliedMigrations(tx Queryer, tableName string) (migrations []*AppliedMigration, err error) {
+func (p postgresDialect) GetAppliedMigrations(ctx context.Context, tx Queryer, tableName string) (migrations []*AppliedMigration, err error) {
 	migrations = make([]*AppliedMigration, 0)
 
 	query := fmt.Sprintf(`
 		SELECT id, checksum, execution_time_in_millis, applied_at
 		FROM %s ORDER BY id ASC
 	`, tableName)
-	rows, err := tx.Query(query)
+	rows, err := tx.QueryContext(ctx, query)
 	if err != nil {
 		return migrations, err
 	}

@@ -1,10 +1,8 @@
 package schema
 
 import (
-	"errors"
 	"fmt"
 	"math/rand"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -19,15 +17,15 @@ func TestCreateMigrationsTable(t *testing.T) {
 		defer func() { _ = db.Close() }()
 
 		migrator := makeTestMigrator(WithDialect(tdb.Dialect))
-		migrator.createMigrationsTable(db)
-		if migrator.err != nil {
-			t.Errorf("Error occurred when creating migrations table: %s", migrator.err)
+		err := tdb.Dialect.CreateMigrationsTable(migrator.ctx, db, migrator.QuotedTableName())
+		if err != nil {
+			t.Errorf("Error occurred when creating migrations table: %s", err)
 		}
 
-		// Test that we can re-run it safely
-		migrator.createMigrationsTable(db)
-		if migrator.err != nil {
-			t.Errorf("Calling createMigrationsTable a second time failed: %s", migrator.err)
+		// Test that we can re-run it again with no error
+		err = tdb.Dialect.CreateMigrationsTable(migrator.ctx, db, migrator.QuotedTableName())
+		if err != nil {
+			t.Errorf("Calling createMigrationsTable a second time failed: %s", err)
 		}
 	})
 }
@@ -43,14 +41,14 @@ func TestLockAndUnlock(t *testing.T) {
 		migrator := makeTestMigrator(WithDialect(tdb.Dialect))
 
 		if _, isLocker := tdb.Dialect.(Locker); isLocker {
-			migrator.lock(db)
-			if migrator.err != nil {
-				t.Fatal(migrator.err)
+			err := migrator.lock(db)
+			if err != nil {
+				t.Fatal(err)
 			}
 
-			migrator.unlock(db)
-			if migrator.err != nil {
-				t.Fatal(migrator.err)
+			err = migrator.unlock(db)
+			if err != nil {
+				t.Fatal(err)
 			}
 		}
 	})
@@ -67,7 +65,7 @@ func TestApplyInLexicalOrder(t *testing.T) {
 		db := tdb.Connect(t)
 		defer func() { _ = db.Close() }()
 
-		start := time.Now().Round(time.Second) // Rounding needed because MySQL stores second-level accuracy
+		start := time.Now().Truncate(time.Second) // MySQL has only second accuracy, so we need start/end to span 1 second
 
 		tableName := "lexical_order_migrations"
 		migrator := NewMigrator(WithDialect(tdb.Dialect), WithTableName(tableName))
@@ -76,7 +74,7 @@ func TestApplyInLexicalOrder(t *testing.T) {
 			t.Error(err)
 		}
 
-		end := time.Now().Round(time.Second)
+		end := time.Now().Add(time.Second).Truncate(time.Second) // MySQL has only second accuracy, so we need start/end to span 1 second
 
 		applied, err := migrator.GetAppliedMigrations(db)
 		if err != nil {
@@ -135,9 +133,8 @@ func TestFailedMigration(t *testing.T) {
 			},
 		}
 		err := migrator.Apply(db, migrations)
-		if err == nil || !strings.Contains(err.Error(), "TIBBLE") {
-			t.Errorf("Expected explanatory error from failed migration. Got %v", err)
-		}
+		expectErrorContains(t, err, "TIBBLE")
+
 		query := "SELECT * FROM " + migrator.QuotedTableName()
 		rows, _ := db.Query(query)
 
@@ -285,42 +282,12 @@ func TestMultiSchemaSupport(t *testing.T) {
 func TestRunFailure(t *testing.T) {
 	bc := BadConnection{}
 	m := makeTestMigrator()
-	m.run(bc, makeValidUnorderedMigrations())
-	expectedContents := "FAIL: SELECT id, checksum"
-	if m.err == nil || !strings.Contains(m.err.Error(), expectedContents) {
-		t.Errorf("Expected error msg with '%s'. Got '%v'.", expectedContents, m.err)
-	}
+	err := m.run(bc, makeValidUnorderedMigrations())
+	expectErrorContains(t, err, "SELECT id, checksum")
 
-	m.err = ErrPriorFailure
-	m.run(bc, makeValidUnorderedMigrations())
-	if m.err != ErrPriorFailure {
-		t.Errorf("Expected error %v. Got %v.", ErrPriorFailure, m.err)
-	}
-
-	m.err = nil
-	m.run(nil, makeValidUnorderedMigrations())
-	if m.err != ErrNilDB {
-		t.Errorf("Expected error '%s'. Got '%v'.", expectedContents, m.err)
-	}
-}
-
-func TestMigrationRecoversFromPanics(t *testing.T) {
-	db := connectDB(t, "postgres:latest")
-	migrator := makeTestMigrator()
-	migrator.transaction(db, func(tx Queryer) { panic(errors.New("Panic Error")) })
-	if migrator.err == nil {
-		t.Error("Expected error to be set after panic. Got nil")
-	} else if migrator.err.Error() != "Panic Error" {
-		t.Errorf("Expected panic to be converted to error=Panic Error. Got %v", migrator.err)
-	}
-
-	migrator.err = nil
-	migrator.transaction(db, func(tx Queryer) { panic("Panic String") })
-
-	if migrator.err == nil {
-		t.Error("Expected error to be set after panic. Got nil")
-	} else if migrator.err.Error() != "Panic String" {
-		t.Errorf("Expected panic to be converted to error=Panic String. Got %v", migrator.err)
+	err = m.run(nil, makeValidUnorderedMigrations())
+	if err != ErrNilDB {
+		t.Errorf("Expected error '%s'. Got '%v'.", ErrNilDB, err)
 	}
 }
 
