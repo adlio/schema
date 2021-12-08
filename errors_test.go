@@ -213,4 +213,11 @@ func TestLockWithPriorError(t *testing.T) {
 			t.Errorf("Expected error %v. Got %v.", ErrPriorFailure, migrator.err)
 		}
 	})
+
+func expectErrorContains(t *testing.T, err error, contains string) {
+	if err == nil {
+		t.Errorf("Expected an error string containing '%s', got nil", contains)
+	} else if !strings.Contains(err.Error(), contains) {
+		t.Errorf("Expected an error string containing '%s', got '%s' instead", contains, err.Error())
+	}
 }
