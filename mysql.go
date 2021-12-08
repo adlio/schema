@@ -19,7 +19,7 @@ type mysqlDialect struct{}
 // migrations are run.
 func (m mysqlDialect) Lock(ctx context.Context, tx Queryer, tableName string) error {
 	lockID := m.advisoryLockID(tableName)
-	query := fmt.Sprintf(`SELECT GET_LOCK(%s, 10)`, lockID)
+	query := fmt.Sprintf(`SELECT GET_LOCK('%s', 10)`, lockID)
 	_, err := tx.ExecContext(ctx, query)
 	return err
 }
@@ -28,7 +28,7 @@ func (m mysqlDialect) Lock(ctx context.Context, tx Queryer, tableName string) er
 // migrations are run.
 func (m mysqlDialect) Unlock(ctx context.Context, tx Queryer, tableName string) error {
 	lockID := m.advisoryLockID(tableName)
-	query := fmt.Sprintf(`SELECT RELEASE_LOCK(%s)`, lockID)
+	query := fmt.Sprintf(`SELECT RELEASE_LOCK('%s')`, lockID)
 	_, err := tx.ExecContext(ctx, query)
 	return err
 }

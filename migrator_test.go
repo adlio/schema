@@ -67,7 +67,7 @@ func TestApplyInLexicalOrder(t *testing.T) {
 		db := tdb.Connect(t)
 		defer func() { _ = db.Close() }()
 
-		start := time.Now().Round(time.Second) // Rounding needed because MySQL stores second-level accuracy
+		start := time.Now().Truncate(time.Second) // MySQL has only second accuracy, so we need start/end to span 1 second
 
 		tableName := "lexical_order_migrations"
 		migrator := NewMigrator(WithDialect(tdb.Dialect), WithTableName(tableName))
@@ -76,7 +76,7 @@ func TestApplyInLexicalOrder(t *testing.T) {
 			t.Error(err)
 		}
 
-		end := time.Now().Round(time.Second)
+		end := time.Now().Add(time.Second).Truncate(time.Second) // MySQL has only second accuracy, so we need start/end to span 1 second
 
 		applied, err := migrator.GetAppliedMigrations(db)
 		if err != nil {
