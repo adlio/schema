@@ -14,7 +14,7 @@ import (
 var exampleMigrations embed.FS
 
 func TestMigrationsFromEmbedFS(t *testing.T) {
-	migrations, err := FSMigrations(exampleMigrations, "test-migrations/saas")
+	migrations, err := FSMigrations(exampleMigrations, "test-migrations/saas/*.sql")
 	if err != nil {
 		t.Error(err)
 	}
@@ -46,6 +46,6 @@ func TestFSMigrationsWithInvalidFiles(t *testing.T) {
 		},
 		"invalid-migrations/fake.sql": nil,
 	}
-	_, err := FSMigrations(testfs, "invalid-migrations")
+	_, err := FSMigrations(testfs, "invalid-migrations/*.sql")
 	expectErrorContains(t, err, "fake.sql")
 }
