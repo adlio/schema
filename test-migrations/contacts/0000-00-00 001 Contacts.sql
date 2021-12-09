@@ -1,0 +1,2 @@
+CREATE TABLE contacts (id INTEGER PRIMARY KEY);
+INSERT INTO contacts (id) VALUES (1);

@@ -8,6 +8,13 @@ to your Go application's database schema.
 [![Go Report Card](https://goreportcard.com/badge/github.com/adlio/schema?style=for-the-badge)](https://goreportcard.com/report/github.com/adlio/schema)
 [![Code Coverage](https://img.shields.io/codecov/c/github/adlio/schema?style=for-the-badge)](https://codecov.io/gh/adlio/schema)
 
+## Features
+
+- Cloud-friendly design tolerates embedded use in clusters
+- Supports migrations in embed.FS (requires go:embed in Go 1.16+)
+- Dependency-free (All go.mod dependencies are used only in tests)
+- Unidirectional migrations (no "down" migration complexity)
+
 ## Package Opinions
 
 There are many other schema migration tools. This one exists because of a
@@ -18,21 +25,19 @@ particular set of opinions:
    "compiled in" to the build, and should not rely on external tools.
 2. Using an external command-line tool for schema migrations needlessly
    complicates testing and deployment.
-3. Sequentially-numbered integer migration IDs will create too many unnecessary
-   schema collisions on a distributed, asynchronously-communicating team.
-4. SQL is the best language to use to specify changes to SQL schemas.
-5. "Down" migrations add needless complication, aren't often used, and are
+3. SQL is the best language to use to specify changes to SQL schemas.
+4. "Down" migrations add needless complication, aren't often used, and are
    tedious to properly test when they are used. In the unlikely event you need
    to migrate backwards, it's possible to write the "rollback" migration as
    a separate "up" migration.
-6. Deep dependency chains should be avoided, especially in a compiled
+5. Deep dependency chains should be avoided, especially in a compiled
    binary. We don't want to import an ORM into our binaries just to get SQL
    the features of this package. The `schema` package imports only
    [standard library packages](https://godoc.org/github.com/adlio/schema?imports)
    (**NOTE** \*We do import `ory/dockertest` in our tests).
-7. Storing raw SQL as strings inside `.go` files is an acceptable trade-off
-   for the above. (For users who depend on `.sql` files, bolt-on integrations
-   of go-bindata, go-rice or similar binary embedders are possible).
+6. Sequentially-numbered integer migration IDs will create too many unnecessary
+   schema collisions on a distributed, asynchronously-communicating team
+   (this is not yet strictly enforced, but may be later).
 
 ## Supported Databases
 
@@ -46,38 +51,38 @@ or feature enhancements / bug fixes.
 - [x] SQLite
 - [x] MySQL / MariaDB
 - [ ] SQL Server (open a Pull Request)
+- [ ] Support for other databases (CockroachDB, Redshift, Snowflake, etc)
 
 ## Roadmap
 
-- [ ] Enhancements and documentation to facilitate asset embedding via go:embed
+- [x] Enhancements and documentation to facilitate asset embedding via go:embed
 - [ ] Add a `Validate()` method to allow checking migration names for
       consistency and to detect problematic changes in the migrations list.
 - [ ] SQL Server support
 
-## Usage Instructions
+## Usage Instructions (Go 1.16+)
 
 Create a `schema.Migrator` in your bootstrap/config/database connection code,
 then call its `Apply()` method with your database connection and a slice of
-`*schema.Migration` structs. Like so:
+`*schema.Migration` structs. Assuming you're using Go 1.16 or above, and you
+have a directory of SQL files called `my-migrations/` next to your main.go file,
+you'll run something like this:
 
-    db, err := sql.Open(...) // Or however you get a *sql.DB
+```go
+//go:embed my-migrations
+var MyMigrations embed.FS
 
-    migrator := schema.NewMigrator()
-    migrator.Apply(db, []*schema.Migration{
-      &schema.Migration{
-        ID: "2019-09-24 Create Albums",
-        Script: `
-        CREATE TABLE albums (
-          id SERIAL PRIMARY KEY,
-          title CHARACTER VARYING (255) NOT NULL
-        )
-        `
-      }
-    })
+func main() {
+   db, err := sql.Open(...) // Or however you get a \*sql.DB
+
+   migrator := schema.NewMigrator()
+   err = migrator.Apply(db, FSMigrations(MyMigrations, "my-migrations/*.sql"))
+}
+```
 
 The `.Apply()` function figures out which of the supplied Migrations have not
 yet been executed in the database (based on the ID), and executes the `Script`
-for each in **alphabetical order by ID**. This procedure means its OK to call
+for each in **alphabetical order by filename**. This procedure means its OK to call
 `.Apply()` on the same Migrator with a different set of Migrations each time
 (which you might do if you want to avoid the ugliness of one giant migrations.go
 file with hundreds of lines of embedded SQL in it).
@@ -85,7 +90,7 @@ file with hundreds of lines of embedded SQL in it).
 The `NewMigrator()` function accepts option arguments to customize the dialect
 and the name of the migration tracking table. By default, the tracking table
 will be set to `schema.DefaultTableName` (`schema_migrations`). To change it
-to `my_migrations`:
+to `my_migrations` instead:
 
 ```go
 migrator := schema.NewMigrator(schema.WithTableName("my_migrations"))
@@ -100,19 +105,40 @@ does not exist, and then locks it to modifications while building and running
 the migration plan. This means that the first-arriving process will **win** and
 will perform its migrations on the database.
 
+## Usage Instructions (pre Go 1.16)
+
+If you're running in an earlier version of Go, Migration{} structs will need to
+be created manually, such as:
+
+```go
+db, err := sql.Open(...) // Or however you get a *sql.DB
+
+migrator := schema.NewMigrator()
+migrator.Apply(db, []*schema.Migration{
+   &schema.Migration{
+      ID: "2019-09-24 Create Albums",
+      Script: `
+      CREATE TABLE albums (
+         id SERIAL PRIMARY KEY,
+         title CHARACTER VARYING (255) NOT NULL
+      )
+      `
+   },
+})
+```
+
 ## Rules of Applying Migrations
 
-1.  **Never, ever change** the `ID` or `Script` of a Migration which has already
-    been executed on your database. If you've made a mistake, you'll need to correct
-    it in a subsequent migration.
-2.  Use a consistent, but descriptive format for migration `ID`s. Your format
-    Consider
-    prefixing them with today's timestamp. Examples:
+1.  **Never, ever change** the `ID` (filename) or `Script` (fille contents)
+    of a Migration which has already been executed on your database. If you've
+    made a mistake, you'll need to correct it in a subsequent migration.
+2.  Use a consistent, but descriptive format for migration `ID`s/filenames.
+    Consider prefixing them with today's timestamp. Examples:
 
-            ID: "2019-01-01T13:45:00 Creates Users"
-            ID: "2001-12-18 001 Changes the Default Value of User Affiliate ID"
+         ID: "2019-01-01T13:45:00 Creates Users"
+         ID: "2001-12-18 001 Changes the Default Value of User Affiliate ID"
 
-        Do not use simple sequentialnumbers like `ID: "1"`.
+    Do not use simple sequentialnumbers like `ID: "1"`.
 
 ## Migration Ordering
 
@@ -136,9 +162,12 @@ there's a good chance a different schema migration tool is more appropriate.
 
 ## Version History
 
-### Pending Version 2 (tip)
+### 2.0.0 (pending release/tip)
 
-SQLite and MySQL support.
+- Add support for migrations in an embed.FS (`FSMigrations(filesystem fs.FS, glob string)`)
+- Add MySQL/MariaDB support (experimental)
+- Add SQLite support (experimental)
+- Update go.mod to `go 1.17`.
 
 ### 1.1.14 - Nov 18, 2021
 

@@ -1,0 +1,4 @@
+CREATE TABLE albums (
+	id INTEGER PRIMARY KEY,
+	artist_id INTEGER
+);

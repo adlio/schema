@@ -28,13 +28,36 @@ func TestSortMigrations(t *testing.T) {
 	}
 }
 
+func unorderedMigrations() []*Migration {
+	return []*Migration{
+		{
+			ID: "2021-01-01 002",
+			Script: `CREATE TABLE data_table (
+				id INTEGER PRIMARY KEY,
+				name VARCHAR(255),
+				created_at TIMESTAMP
+			)`,
+		},
+		{
+			ID:     "2021-01-01 001",
+			Script: "CREATE TABLE first_table (first_name VARCHAR(255), last_name VARCHAR(255))",
+		},
+		{
+			ID:     "2021-01-01 003",
+			Script: `INSERT INTO first_table (first_name, last_name) VALUES ('John', 'Doe')`,
+		},
+	}
+}
+
 func expectID(t *testing.T, migration *Migration, expectedID string) {
+	t.Helper()
 	if migration.ID != expectedID {
 		t.Errorf("Expected Migration to have ID '%s', got '%s' instead", expectedID, migration.ID)
 	}
 }
 
 func expectScriptMatch(t *testing.T, migration *Migration, regexpString string) {
+	t.Helper()
 	re, err := regexp.Compile(regexpString)
 	if err != nil {
 		t.Fatalf("Invalid regexp: '%s': %s", regexpString, err)
