@@ -280,9 +280,9 @@ func TestMultiSchemaSupport(t *testing.T) {
 // triggers an expected error.
 //
 func TestRunFailure(t *testing.T) {
-	bc := BadConnection{}
+	bq := BadQueryer{}
 	m := makeTestMigrator()
-	err := m.run(bc, makeValidUnorderedMigrations())
+	err := m.run(bq, makeValidUnorderedMigrations())
 	expectErrorContains(t, err, "SELECT id, checksum")
 
 	err = m.run(nil, makeValidUnorderedMigrations())

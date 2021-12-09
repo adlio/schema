@@ -37,31 +37,6 @@ func (bq BadQueryer) QueryContext(ctx context.Context, sql string, args ...inter
 	return nil, fmt.Errorf("FAIL: %s", strings.TrimSpace(sql))
 }
 
-// BadTransactor implements the Transactor interface with no-ops for Exec() and
-// Query(), and failures on all calls to Begin()
-type BadTransactor struct{}
-
-func (bt BadTransactor) BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error) {
-	return nil, ErrBeginFailed
-}
-
-// BadConnection implements the Connection interface, but fails on all calls to
-// Begin(), Query() or Exec()
-//
-type BadConnection struct{}
-
-func (bc BadConnection) BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error) {
-	return nil, ErrBeginFailed
-}
-
-func (bc BadConnection) ExecContext(ctx context.Context, sql string, args ...interface{}) (sql.Result, error) {
-	return nil, fmt.Errorf("FAIL: %s", strings.TrimSpace(sql))
-}
-
-func (bc BadConnection) QueryContext(ctx context.Context, sql string, args ...interface{}) (*sql.Rows, error) {
-	return nil, fmt.Errorf("FAIL: %s", strings.TrimSpace(sql))
-}
-
 // BadDB implements the interface for the *sql.DB Conn() method in a way that
 // always fails
 type BadDB struct{}
