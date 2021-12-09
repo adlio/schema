@@ -69,7 +69,7 @@ func TestApplyInLexicalOrder(t *testing.T) {
 
 		tableName := "lexical_order_migrations"
 		migrator := NewMigrator(WithDialect(tdb.Dialect), WithTableName(tableName))
-		err := migrator.Apply(db, makeValidUnorderedMigrations())
+		err := migrator.Apply(db, unorderedMigrations())
 		if err != nil {
 			t.Error(err)
 		}
@@ -228,13 +228,13 @@ func TestMultiSchemaSupport(t *testing.T) {
 		defer func() { _ = db.Close() }()
 
 		// Apply the Music migrations
-		err := music.Apply(db, makeMusicMigrations())
+		err := music.Apply(db, testMigrations(t, "music"))
 		if err != nil {
 			t.Errorf("Failed to apply music migrations: %s", err)
 		}
 
 		// ... then the Contacts Migrations
-		err = contacts.Apply(db, makeContactsMigrations())
+		err = contacts.Apply(db, testMigrations(t, "contacts"))
 		if err != nil {
 			t.Errorf("Failed to apply contact migrations: %s", err)
 		}
@@ -282,10 +282,10 @@ func TestMultiSchemaSupport(t *testing.T) {
 func TestRunFailure(t *testing.T) {
 	bq := BadQueryer{}
 	m := makeTestMigrator()
-	err := m.run(bq, makeValidUnorderedMigrations())
+	err := m.run(bq, testMigrations(t, "useless-ansi"))
 	expectErrorContains(t, err, "SELECT id, checksum")
 
-	err = m.run(nil, makeValidUnorderedMigrations())
+	err = m.run(nil, testMigrations(t, "useless-ansi"))
 	if err != ErrNilDB {
 		t.Errorf("Expected error '%s'. Got '%v'.", ErrNilDB, err)
 	}
@@ -300,114 +300,19 @@ func makeTestMigrator(options ...Option) Migrator {
 	return NewMigrator(options...)
 }
 
-func makeValidUnorderedMigrations() []*Migration {
-	return []*Migration{
-		{
-			ID: "2021-01-01 002",
-			Script: `CREATE TABLE data_table (
-				id INTEGER PRIMARY KEY,
-				name VARCHAR(255),
-				created_at TIMESTAMP
-			)`,
-		},
-		{
-			ID:     "2021-01-01 001",
-			Script: "CREATE TABLE first_table (first_name VARCHAR(255), last_name VARCHAR(255))",
-		},
-		{
-			ID:     "2021-01-01 003",
-			Script: `INSERT INTO first_table (first_name, last_name) VALUES ('John', 'Doe')`,
-		},
+func testMigrations(t *testing.T, dirName string) []*Migration {
+	path := fmt.Sprintf("test-migrations/%s", dirName)
+	migrations, err := MigrationsFromDirectoryPath(path)
+	if err != nil {
+		t.Fatalf("Failed to load test migrations from '%s'", path)
 	}
-}
-
-// makeValidButUselessMigrations exists to provide some migrations that can be run
-// many times in the same database without conflicts (something which would be
-// useless in the real world, but which is very useful for tests).
-//
-// These migrations are used by the AppliedMigration tests so that we can see
-// the effects on the schema_migrations table.
-//
-func makeValidButUselessMigrations() []*Migration {
-	return []*Migration{
-		{
-			ID:     "0000-00-00 001",
-			Script: "SELECT 1",
-		},
-		{
-			ID:     "0000-00-00 002",
-			Script: "SELECT 2",
-		},
-	}
-}
-
-// makeMusicMigrations generates a set of ANSI-SQL compliant migrations that
-// create music-related database tables on any SQL database.
-//
-func makeMusicMigrations() []*Migration {
-	return []*Migration{
-		{
-			ID:     "0000-00-00 001 Artists",
-			Script: `CREATE TABLE artists (id INTEGER PRIMARY KEY)`,
-		},
-		{
-			ID: "0000-00-00 002 Albums",
-			Script: `CREATE TABLE albums (
-				id INTEGER PRIMARY KEY,
-				artist_id INTEGER
-			)`,
-		},
-		{
-			ID: "0000-00-00 003 Tracks",
-			Script: `CREATE TABLE tracks (
-				id INTEGER PRIMARY KEY,
-				artist_id INTEGER,
-				album_id INTEGER
-			)`,
-		},
-	}
-}
-
-// makeContactsMigrations generates a set of ANSI-SQL compliant migrations that
-// create contacts-related database tables on any SQL database. Each of these
-// migrations is a multi-statement string, which requires some special
-// configuration in some Go database/sql drivers (go-mysql-driver in particular).
-//
-func makeContactsMigrations() []*Migration {
-	return []*Migration{
-		{
-			ID: "0000-00-00 001 Contacts",
-			Script: `
-				CREATE TABLE contacts (id INTEGER PRIMARY KEY);
-				INSERT INTO contacts (id) VALUES (1);
-			`,
-		},
-		{
-			ID: "0000-00-00 002 Phone Numbers",
-			Script: `CREATE TABLE phone_numbers (
-				id INTEGER PRIMARY KEY,
-				contact_id INTEGER
-			);
-			INSERT INTO phone_numbers (id, contact_id) VALUES (1, 1);
-			INSERT INTO phone_numbers (id, contact_id) VALUES (2, 1);
-			INSERT INTO phone_numbers (id, contact_id) VALUES (3, 1);`,
-		},
-		{
-			ID: "0000-00-00 003 Addresses",
-			Script: `CREATE TABLE addresses (
-				id INTEGER PRIMARY KEY,
-				contact_id INTEGER
-			);
-			INSERT INTO addresses (id, contact_id) VALUES (1,1);
-			INSERT INTO addresses (id, contact_id) VALUES (2, 1);
-			`,
-		},
-	}
+	return migrations
 }
 
 // assertZonesMatch accepts two Times and fails the test if their time zones
 // don't match.
 func assertZonesMatch(t *testing.T, expected, actual time.Time) {
+	t.Helper()
 	expectedName, expectedOffset := expected.Zone()
 	actualName, actualOffset := actual.Zone()
 	if expectedOffset != actualOffset {

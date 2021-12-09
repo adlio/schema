@@ -12,7 +12,7 @@ func TestGetAppliedMigrations(t *testing.T) {
 		defer func() { _ = db.Close() }()
 
 		migrator := makeTestMigrator(WithDialect(tdb.Dialect))
-		migrations := makeValidButUselessMigrations()
+		migrations := testMigrations(t, "useless-ansi")
 		err := migrator.Apply(db, migrations)
 		if err != nil {
 			t.Error(err)

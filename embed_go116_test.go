@@ -10,11 +10,11 @@ import (
 	"testing/fstest"
 )
 
-//go:embed example-migrations
+//go:embed test-migrations
 var exampleMigrations embed.FS
 
 func TestMigrationsFromEmbedFS(t *testing.T) {
-	migrations, err := FSMigrations(exampleMigrations, "example-migrations")
+	migrations, err := FSMigrations(exampleMigrations, "test-migrations/saas")
 	if err != nil {
 		t.Error(err)
 	}
