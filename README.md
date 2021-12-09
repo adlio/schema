@@ -1,7 +1,7 @@
-# Schema - Embedded Database Migration Library for Go
+# Schema - Database Migrations for Go
 
-An opinionated, embeddable library for tracking and application modifications
-to your Go application's database schema.
+An embeddable library for applying changes to your Go application's
+`database/sql` schema.
 
 [![go.dev reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=for-the-badge)](https://pkg.go.dev/github.com/adlio/schema)
 [![Travis Build Status](https://img.shields.io/travis/com/adlio/schema/main?style=for-the-badge)](https://travis-ci.com/github/adlio/schema)
@@ -15,24 +15,27 @@ to your Go application's database schema.
 - Dependency-free (All go.mod dependencies are used only in tests)
 - Unidirectional migrations (no "down" migration complexity)
 
-## Supported Databases
-
-This package was extracted from a PostgreSQL project. Other databases have solid automated test coverage, but should be considered somewhat experimental in
-production use cases. [Contributions](#contributions) are welcome for additional databases or feature enhancements / bug fixes.
-
-- [x] PostgreSQL
-- [x] SQLite (thanks [kalafut](https://github.com/kalafut)!)
-- [x] MySQL / MariaDB
-- [ ] SQL Server (open a Pull Request)
-- [ ] CockroachDB, Redshift, Snowflake, etc (open a Pull Request)
-
-## Usage Instructions (Go 1.16+)
+# Usage Instructions
 
 Create a `schema.Migrator` in your bootstrap/config/database connection code,
 then call its `Apply()` method with your database connection and a slice of
-`*schema.Migration` structs. Assuming you're using Go 1.16 or above, and you
-have a directory of SQL files called `my-migrations/` next to your main.go file,
-you'll run something like this:
+`*schema.Migration` structs.
+
+The `.Apply()` function figures out which of the supplied Migrations have not
+yet been executed in the database (based on the ID), and executes the `Script`
+for each in **alphabetical order by IDe**.
+
+The `[]*schema.Migration` can be created manually, but the package
+has some utility functions to make it easier to parse .sql files into structs
+with the filename as the `ID` and the file contents as the `Script`.
+
+## Using go:embed (requires Go 1.16+)
+
+Go 1.16 added features to embed a directory of files into the binary as an
+embedded filesystem (`embed.FS`).
+
+Assuming you have a directory of SQL files called `my-migrations/` next to your
+main.go file, you'll run something like this:
 
 ```go
 //go:embed my-migrations
@@ -41,7 +44,7 @@ var MyMigrations embed.FS
 func main() {
    db, err := sql.Open(...) // Or however you get a *sql.DB
 
-   migrator := schema.NewMigrator()
+   migrator := schema.NewMigrator(schema.WithDialect(schema.MySQL))
    err = migrator.Apply(
       db,
       schema.FSMigrations(MyMigrations, "my-migrations/*.sql"),
@@ -49,16 +52,43 @@ func main() {
 }
 ```
 
-The `.Apply()` function figures out which of the supplied Migrations have not
-yet been executed in the database (based on the ID), and executes the `Script`
-for each in **alphabetical order by filename**. This procedure means its OK to call
-`.Apply()` on the same Migrator with a different set of Migrations each time
-(which you might do if you want to avoid the ugliness of one giant migrations.go
-file with hundreds of lines of embedded SQL in it).
+The `WithDialect()` option accepts: `schema.MySQL`, `schema.Postgres`, or
+`schema.SQLite`. These dialects all use only `database/sql` calls, so you may
+have success with other databases which are SQL-compatible with the above
+dialects.
+
+You can also provide your own custom `Dialect`. See `dialect.go` for the
+definition of the `Dialect` interface, and the optional `Locker` interface. Note
+that `Locker` is critical for clustered operation to ensure that only one of
+many processes is attempting to run migrations simultaneously.
+
+## Using Inline Migration Structs
+
+If you're running in an earlier version of Go, Migration{} structs will need to
+be created manually:
+
+```go
+db, err := sql.Open(...)
+
+migrator := schema.NewMigrator() // Postgres is the default Dialect
+migrator.Apply(db, []*schema.Migration{
+   &schema.Migration{
+      ID: "2019-09-24 Create Albums",
+      Script: `
+      CREATE TABLE albums (
+         id SERIAL PRIMARY KEY,
+         title CHARACTER VARYING (255) NOT NULL
+      )
+      `
+   },
+})
+```
+
+## Constructor Options
 
 The `NewMigrator()` function accepts option arguments to customize the dialect
 and the name of the migration tracking table. By default, the tracking table
-will be set to `schema.DefaultTableName` (`schema_migrations`). To change it
+will be named `schema_migrations`. To change it
 to `my_migrations` instead:
 
 ```go
@@ -74,27 +104,18 @@ does not exist, and then locks it to modifications while building and running
 the migration plan. This means that the first-arriving process will **win** and
 will perform its migrations on the database.
 
-## Usage Instructions (pre Go 1.16)
+## Supported Databases
 
-If you're running in an earlier version of Go, Migration{} structs will need to
-be created manually, such as:
+This package was extracted from a PostgreSQL project. Other databases have solid
+automated test coverage, but should be considered somewhat experimental in
+production use cases. [Contributions](#contributions) are welcome for
+additional databases or feature enhancements / bug fixes.
 
-```go
-db, err := sql.Open(...) // Or however you get a *sql.DB
-
-migrator := schema.NewMigrator()
-migrator.Apply(db, []*schema.Migration{
-   &schema.Migration{
-      ID: "2019-09-24 Create Albums",
-      Script: `
-      CREATE TABLE albums (
-         id SERIAL PRIMARY KEY,
-         title CHARACTER VARYING (255) NOT NULL
-      )
-      `
-   },
-})
-```
+- [x] PostgreSQL (database/sql driver only, see [adlio/pgxschema](https://github.com/adlio/pgxschema) if you use `jack/pgx`)
+- [x] SQLite (thanks [kalafut](https://github.com/kalafut)!)
+- [x] MySQL / MariaDB
+- [ ] SQL Server (open a Pull Request)
+- [ ] CockroachDB, Redshift, Snowflake, etc (open a Pull Request)
 
 ## Package Opinions
 
@@ -122,7 +143,7 @@ particular set of opinions:
 
 ## Rules of Applying Migrations
 
-1.  **Never, ever change** the `ID` (filename) or `Script` (fille contents)
+1.  **Never, ever change** the `ID` (filename) or `Script` (file contents)
     of a Migration which has already been executed on your database. If you've
     made a mistake, you'll need to correct it in a subsequent migration.
 2.  Use a consistent, but descriptive format for migration `ID`s/filenames.
@@ -157,7 +178,7 @@ there's a good chance a different schema migration tool is more appropriate.
 
 ## Version History
 
-### 2.0.0 (pending release/tip)
+### 2.0.0 - Dec 9, 2021
 
 - Add support for migrations in an embed.FS (`FSMigrations(filesystem fs.FS, glob string)`)
 - Add MySQL/MariaDB support (experimental)
