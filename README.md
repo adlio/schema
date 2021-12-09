@@ -15,30 +15,6 @@ to your Go application's database schema.
 - Dependency-free (All go.mod dependencies are used only in tests)
 - Unidirectional migrations (no "down" migration complexity)
 
-## Package Opinions
-
-There are many other schema migration tools. This one exists because of a
-particular set of opinions:
-
-1. Database credentials are runtime configuration details, but database
-   schema is a **build-time applicaton dependency**, which means it should be
-   "compiled in" to the build, and should not rely on external tools.
-2. Using an external command-line tool for schema migrations needlessly
-   complicates testing and deployment.
-3. SQL is the best language to use to specify changes to SQL schemas.
-4. "Down" migrations add needless complication, aren't often used, and are
-   tedious to properly test when they are used. In the unlikely event you need
-   to migrate backwards, it's possible to write the "rollback" migration as
-   a separate "up" migration.
-5. Deep dependency chains should be avoided, especially in a compiled
-   binary. We don't want to import an ORM into our binaries just to get SQL
-   the features of this package. The `schema` package imports only
-   [standard library packages](https://godoc.org/github.com/adlio/schema?imports)
-   (**NOTE** \*We do import `ory/dockertest` in our tests).
-6. Sequentially-numbered integer migration IDs will create too many unnecessary
-   schema collisions on a distributed, asynchronously-communicating team
-   (this is not yet strictly enforced, but may be later).
-
 ## Supported Databases
 
 This package was extracted from a PostgreSQL project. Other databases have solid automated test coverage, but should be considered somewhat experimental in
@@ -48,14 +24,7 @@ production use cases. [Contributions](#contributions) are welcome for additional
 - [x] SQLite (thanks [kalafut](https://github.com/kalafut)!)
 - [x] MySQL / MariaDB
 - [ ] SQL Server (open a Pull Request)
-- [ ] Support for other databases (CockroachDB, Redshift, Snowflake, etc)
-
-## Roadmap
-
-- [x] Enhancements and documentation to facilitate asset embedding via go:embed
-- [ ] Add a `Validate()` method to allow checking migration names for
-      consistency and to detect problematic changes in the migrations list.
-- [ ] SQL Server support
+- [ ] CockroachDB, Redshift, Snowflake, etc (open a Pull Request)
 
 ## Usage Instructions (Go 1.16+)
 
@@ -127,6 +96,30 @@ migrator.Apply(db, []*schema.Migration{
 })
 ```
 
+## Package Opinions
+
+There are many other schema migration tools. This one exists because of a
+particular set of opinions:
+
+1. Database credentials are runtime configuration details, but database
+   schema is a **build-time applicaton dependency**, which means it should be
+   "compiled in" to the build, and should not rely on external tools.
+2. Using an external command-line tool for schema migrations needlessly
+   complicates testing and deployment.
+3. SQL is the best language to use to specify changes to SQL schemas.
+4. "Down" migrations add needless complication, aren't often used, and are
+   tedious to properly test when they are used. In the unlikely event you need
+   to migrate backwards, it's possible to write the "rollback" migration as
+   a separate "up" migration.
+5. Deep dependency chains should be avoided, especially in a compiled
+   binary. We don't want to import an ORM into our binaries just to get SQL
+   the features of this package. The `schema` package imports only
+   [standard library packages](https://godoc.org/github.com/adlio/schema?imports)
+   (**NOTE** \*We do import `ory/dockertest` in our tests).
+6. Sequentially-numbered integer migration IDs will create too many unnecessary
+   schema collisions on a distributed, asynchronously-communicating team
+   (this is not yet strictly enforced, but may be later).
+
 ## Rules of Applying Migrations
 
 1.  **Never, ever change** the `ID` (filename) or `Script` (fille contents)
@@ -145,11 +138,6 @@ migrator.Apply(db, []*schema.Migration{
 Migrations **are not** executed in the order they are specified in the slice.
 They will be re-sorted alphabetically by their IDs before executing them.
 
-## Inspecting the State of Applied Migrations
-
-Call `migrator.GetAppliedMigrations(db)` to get info about migrations which
-have been successfully applied.
-
 ## Contributions
 
 ... are welcome. Please include tests with your contribution. We've integrated
@@ -159,6 +147,13 @@ creating clean test databases.
 Before contributing, please read the [package opinions](#package-opinions)
 section. If your contribution is in disagreement with those opinions, then
 there's a good chance a different schema migration tool is more appropriate.
+
+## Roadmap
+
+- [x] Enhancements and documentation to facilitate asset embedding via go:embed
+- [ ] Add a `Validate()` method to allow checking migration names for
+      consistency and to detect problematic changes in the migrations list.
+- [ ] SQL Server support
 
 ## Version History
 
