@@ -18,9 +18,6 @@ var (
 	// ErrBeginFailed indicates that the Begin() method failed (couldn't start Tx)
 	ErrBeginFailed = fmt.Errorf("begin failed")
 
-	// ErrPriorFailure indicates a failure happened earlier in the Migrator Apply()
-	ErrPriorFailure = fmt.Errorf("previous error")
-
 	ErrLockFailed = fmt.Errorf("lock failed")
 )
 
