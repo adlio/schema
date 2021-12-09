@@ -178,7 +178,7 @@ there's a good chance a different schema migration tool is more appropriate.
 
 ## Version History
 
-### 2.0.0 - Dec 9, 2021
+### 1.2.0 - Dec 9, 2021
 
 - Add support for migrations in an embed.FS (`FSMigrations(filesystem fs.FS, glob string)`)
 - Add MySQL/MariaDB support (experimental)
