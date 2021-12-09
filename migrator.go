@@ -2,7 +2,6 @@ package schema
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"time"
 )
@@ -75,7 +74,7 @@ func (m *Migrator) Apply(db DB, migrations []*Migration) (err error) {
 	}
 	defer func() { err = coalesceErrs(err, m.unlock(conn)) }()
 
-	tx, err := conn.BeginTx(m.ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	tx, err := conn.BeginTx(m.ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -103,7 +102,7 @@ func (m *Migrator) lock(tx Queryer) error {
 		if err != nil {
 			return err
 		}
-		m.log("Locked %s at ", m.QuotedTableName(), time.Now().Format(time.RFC3339Nano))
+		m.log(fmt.Sprintf("Locked %s at %s", m.QuotedTableName(), time.Now().Format(time.RFC3339Nano)))
 	}
 	return nil
 }
@@ -114,7 +113,7 @@ func (m *Migrator) unlock(tx Queryer) error {
 		if err != nil {
 			return err
 		}
-		m.log("Unlocked %s at ", m.QuotedTableName(), time.Now().Format(time.RFC3339Nano))
+		m.log(fmt.Sprintf("Unlocked %s at %s", m.QuotedTableName(), time.Now().Format(time.RFC3339Nano)))
 	}
 	return nil
 }
