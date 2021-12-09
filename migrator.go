@@ -109,7 +109,7 @@ func (m *Migrator) lock(tx Queryer) error {
 
 func (m *Migrator) unlock(tx Queryer) error {
 	if l, isLocker := m.Dialect.(Locker); isLocker {
-		err := l.Unlock(m.ctx, tx, m.TableName)
+		err := l.Unlock(m.ctx, tx, m.QuotedTableName())
 		if err != nil {
 			return err
 		}
