@@ -41,14 +41,11 @@ particular set of opinions:
 
 ## Supported Databases
 
-This package was extracted from a PostgreSQL project, and that is the only
-database with extensive in-the-wild testing. Other databases have solid automated
-test coverage, but should be considered somewhat experimental in production
-use cases. [Contribution](#contributions) are welcome for additional databases
-or feature enhancements / bug fixes.
+This package was extracted from a PostgreSQL project. Other databases have solid automated test coverage, but should be considered somewhat experimental in
+production use cases. [Contributions](#contributions) are welcome for additional databases or feature enhancements / bug fixes.
 
 - [x] PostgreSQL
-- [x] SQLite
+- [x] SQLite (thanks [kalafut](https://github.com/kalafut)!)
 - [x] MySQL / MariaDB
 - [ ] SQL Server (open a Pull Request)
 - [ ] Support for other databases (CockroachDB, Redshift, Snowflake, etc)
@@ -73,10 +70,13 @@ you'll run something like this:
 var MyMigrations embed.FS
 
 func main() {
-   db, err := sql.Open(...) // Or however you get a \*sql.DB
+   db, err := sql.Open(...) // Or however you get a *sql.DB
 
    migrator := schema.NewMigrator()
-   err = migrator.Apply(db, FSMigrations(MyMigrations, "my-migrations/*.sql"))
+   err = migrator.Apply(
+      db,
+      schema.FSMigrations(MyMigrations, "my-migrations/*.sql"),
+   )
 }
 ```
 
