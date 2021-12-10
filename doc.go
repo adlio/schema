@@ -2,9 +2,9 @@
 // ("migrations") as embedded functionality inside another application
 // which is using a database/sql
 //
-// Basic usage instructions involve creating a pgxschema.Migrator via the
-// pgxschema.NewMigrator() function, and then passing your pgx.Conn or
-// pgxpool.Pool to its .Apply() method.
+// Basic usage instructions involve creating a schema.Migrator via the
+// schema.NewMigrator() function, and then passing your *sql.DB
+// to its .Apply() method.
 //
 // See the package's README.md file for more usage instructions.
 //

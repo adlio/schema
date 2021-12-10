@@ -2,7 +2,6 @@ package schema
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"time"
 )
@@ -21,7 +20,7 @@ type Migrator struct {
 
 // NewMigrator creates a new Migrator with the supplied
 // options
-func NewMigrator(options ...Option) Migrator {
+func NewMigrator(options ...Option) *Migrator {
 	m := Migrator{
 		TableName: DefaultTableName,
 		Dialect:   Postgres,
@@ -30,7 +29,7 @@ func NewMigrator(options ...Option) Migrator {
 	for _, opt := range options {
 		m = opt(m)
 	}
-	return m
+	return &m
 }
 
 // QuotedTableName returns the dialect-quoted fully-qualified name for the
@@ -75,7 +74,7 @@ func (m *Migrator) Apply(db DB, migrations []*Migration) (err error) {
 	}
 	defer func() { err = coalesceErrs(err, m.unlock(conn)) }()
 
-	tx, err := conn.BeginTx(m.ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	tx, err := conn.BeginTx(m.ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -103,18 +102,18 @@ func (m *Migrator) lock(tx Queryer) error {
 		if err != nil {
 			return err
 		}
-		m.log("Locked %s at ", m.QuotedTableName(), time.Now().Format(time.RFC3339Nano))
+		m.log(fmt.Sprintf("Locked %s at %s", m.QuotedTableName(), time.Now().Format(time.RFC3339Nano)))
 	}
 	return nil
 }
 
 func (m *Migrator) unlock(tx Queryer) error {
 	if l, isLocker := m.Dialect.(Locker); isLocker {
-		err := l.Unlock(m.ctx, tx, m.TableName)
+		err := l.Unlock(m.ctx, tx, m.QuotedTableName())
 		if err != nil {
 			return err
 		}
-		m.log("Unlocked %s at ", m.QuotedTableName(), time.Now().Format(time.RFC3339Nano))
+		m.log(fmt.Sprintf("Unlocked %s at %s", m.QuotedTableName(), time.Now().Format(time.RFC3339Nano)))
 	}
 	return nil
 }
