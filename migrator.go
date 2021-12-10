@@ -20,7 +20,7 @@ type Migrator struct {
 
 // NewMigrator creates a new Migrator with the supplied
 // options
-func NewMigrator(options ...Option) Migrator {
+func NewMigrator(options ...Option) *Migrator {
 	m := Migrator{
 		TableName: DefaultTableName,
 		Dialect:   Postgres,
@@ -29,7 +29,7 @@ func NewMigrator(options ...Option) Migrator {
 	for _, opt := range options {
 		m = opt(m)
 	}
-	return m
+	return &m
 }
 
 // QuotedTableName returns the dialect-quoted fully-qualified name for the

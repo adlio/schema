@@ -178,6 +178,10 @@ there's a good chance a different schema migration tool is more appropriate.
 
 ## Version History
 
+### 1.2.3 - Dec10, 2021
+
+- BUGFIX: Restore the ability to chain NewMigrator().Apply
+
 ### 1.2.2 - Dec 9, 2021
 
 - Add support for migrations in an embed.FS (`FSMigrations(filesystem fs.FS, glob string)`)

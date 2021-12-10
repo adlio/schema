@@ -291,10 +291,16 @@ func TestRunFailure(t *testing.T) {
 	}
 }
 
+func TestNewMigratorApplyChain(t *testing.T) {
+	// This is a compilability test... it is here to confirm that
+	// NewMigrator()'s return value can have Apply() called on it.
+	_ = NewMigrator().Apply(nil, testMigrations(t, "useless-ansi"))
+}
+
 // makeTestMigrator is a utility function which produces a migrator with an
 // isolated environment (isolated due to a unique name for the migration
 // tracking table).
-func makeTestMigrator(options ...Option) Migrator {
+func makeTestMigrator(options ...Option) *Migrator {
 	tableName := time.Now().Format(time.RFC3339Nano)
 	options = append(options, WithTableName(tableName))
 	return NewMigrator(options...)
