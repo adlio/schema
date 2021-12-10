@@ -12,7 +12,7 @@ An embeddable library for applying changes to your Go application's
 
 - Cloud-friendly design tolerates embedded use in clusters
 - Supports migrations in embed.FS (requires go:embed in Go 1.16+)
-- Dependency-free (All go.mod dependencies are used only in tests)
+- [Depends only on Go standard library](https://pkg.go.dev/github.com/adlio/schema?tab=imports) (Note that all go.mod dependencies are used only in tests)
 - Unidirectional migrations (no "down" migration complexity)
 
 # Usage Instructions
