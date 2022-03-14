@@ -55,7 +55,7 @@ func TestMain(m *testing.M) {
 }
 
 func withEachDialect(t *testing.T, f func(t *testing.T, d Dialect)) {
-	dialects := []Dialect{Postgres, MySQL, SQLite}
+	dialects := []Dialect{Postgres, MySQL, SQLite, MSSQL}
 	for _, dialect := range dialects {
 		t.Run(fmt.Sprintf("%T", dialect), func(t *testing.T) {
 			f(t, dialect)

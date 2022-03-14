@@ -25,15 +25,30 @@ type TestDB struct {
 }
 
 func (c *TestDB) Username() string {
-	return "schemauser"
+	switch c.Driver {
+	case MSSQLDriverName:
+		return "SA"
+	default:
+		return "schemauser"
+	}
 }
 
 func (c *TestDB) Password() string {
-	return "schemasecret"
+	switch c.Driver {
+	case MSSQLDriverName:
+		return "Th1sI5AMor3_Compl1c4tedPasswd!"
+	default:
+		return "schemasecret"
+	}
 }
 
 func (c *TestDB) DatabaseName() string {
-	return "schematests"
+	switch c.Driver {
+	case MSSQLDriverName:
+		return "master"
+	default:
+		return "schematests"
+	}
 }
 
 // Port asks Docker for the host-side port we can use to connect to the
@@ -45,6 +60,8 @@ func (c *TestDB) Port() string {
 		return c.Resource.GetPort("3306/tcp")
 	case PostgresDriverName:
 		return c.Resource.GetPort("5432/tcp")
+	case MSSQLDriverName:
+		return c.Resource.GetPort("1433/tcp")
 	}
 	return ""
 }
@@ -74,6 +91,13 @@ func (c *TestDB) DockerEnvars() []string {
 			fmt.Sprintf("MYSQL_USER=%s", c.Username()),
 			fmt.Sprintf("MYSQL_PASSWORD=%s", c.Password()),
 			fmt.Sprintf("MYSQL_DATABASE=%s", c.DatabaseName()),
+		}
+	case MSSQLDriverName:
+		return []string{
+			"ACCEPT_EULA=Y",
+			fmt.Sprintf("SA_USER=%s", c.Username()),
+			fmt.Sprintf("SA_PASSWORD=%s", c.Password()),
+			fmt.Sprintf("SA_DATABASE=%s", c.DatabaseName()),
 		}
 	default:
 		return []string{}
@@ -110,6 +134,8 @@ func (c *TestDB) DSN() string {
 			return fmt.Sprintf("%s:%s@(localhost:%s)/%s?parseTime=true&multiStatements=true", c.Username(), c.Password(), c.Port(), c.DatabaseName())
 		}
 		return fmt.Sprintf("%s:%s@(localhost:%s)/%s?multiStatements=true", c.Username(), c.Password(), c.Port(), c.DatabaseName())
+	case MSSQLDriverName:
+		return fmt.Sprintf("sqlserver://%s:%s@localhost:%s/?database=%s", c.Username(), c.Password(), c.Port(), c.DatabaseName())
 	}
 	// TODO Return error
 	return "NoDSN"
