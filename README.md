@@ -175,10 +175,17 @@ there's a good chance a different schema migration tool is more appropriate.
 - [ ] Add a `Validate()` method to allow checking migration names for
       consistency and to detect problematic changes in the migrations list.
 - [x] SQL Server support
+- [ ] SQL Server support for the Locker interface to protect against simultaneous
+      migrations from clusters of servers.
 
 ## Version History
 
-### 1.2.3 - Dec10, 2021
+### 1.3.0 - Mar 25, 2022
+
+- Basic SQL Server support (no locking, not recommended for use in clusters)
+- Improved support for running tests on ARM64 machines (M1 Macs)
+
+### 1.2.3 - Dec 10, 2021
 
 - BUGFIX: Restore the ability to chain NewMigrator().Apply
 
