@@ -44,7 +44,7 @@ var TestDBs map[string]*TestDB = map[string]*TestDB{
 	"mysql:latest": {
 		Dialect:    MySQL,
 		Driver:     MySQLDriverName,
-		DockerRepo: "mysql",
+		DockerRepo: "mysql/mysql-server",
 		DockerTag:  "latest",
 	},
 	"mariadb:latest": {
