@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"runtime"
 	"sync"
 	"testing"
 
@@ -33,7 +34,9 @@ func TestMain(m *testing.M) {
 		testDB := TestDBs[name]
 		wg.Add(1)
 		go func() {
-			testDB.Init(pool)
+			if testDB.IsRunnable() {
+				testDB.Init(pool)
+			}
 			wg.Done()
 		}()
 	}
@@ -66,7 +69,11 @@ func withEachDialect(t *testing.T, f func(t *testing.T, d Dialect)) {
 func withEachTestDB(t *testing.T, f func(t *testing.T, tdb *TestDB)) {
 	for dbName, tdb := range TestDBs {
 		t.Run(dbName, func(t *testing.T) {
-			f(t, tdb)
+			if tdb.IsRunnable() {
+				f(t, tdb)
+			} else {
+				t.Skipf("Not runnable on %s", runtime.GOARCH)
+			}
 		})
 	}
 }

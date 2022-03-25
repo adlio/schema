@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"runtime"
 	"testing"
 
 	"github.com/ory/dockertest"
@@ -16,12 +17,13 @@ import (
 // to run database migration tests.
 //
 type TestDB struct {
-	Dialect    Dialect
-	Driver     string
-	DockerRepo string
-	DockerTag  string
-	Resource   *dockertest.Resource
-	path       string
+	Dialect      Dialect
+	Driver       string
+	DockerRepo   string
+	DockerTag    string
+	Resource     *dockertest.Resource
+	SkippedArchs []string
+	path         string
 }
 
 func (c *TestDB) Username() string {
@@ -78,6 +80,15 @@ func (c *TestDB) DockerEnvars() []string {
 	default:
 		return []string{}
 	}
+}
+
+func (c *TestDB) IsRunnable() bool {
+	for _, skippedArch := range c.SkippedArchs {
+		if skippedArch == runtime.GOARCH {
+			return false
+		}
+	}
+	return true
 }
 
 // Path computes the full path to the database on disk (applies only to SQLite
