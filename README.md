@@ -52,10 +52,10 @@ func main() {
 }
 ```
 
-The `WithDialect()` option accepts: `schema.MySQL`, `schema.Postgres`, or
-`schema.SQLite`. These dialects all use only `database/sql` calls, so you may
-have success with other databases which are SQL-compatible with the above
-dialects.
+The `WithDialect()` option accepts: `schema.MySQL`, `schema.Postgres`,
+`schema.SQLite` or `schema.MSSQL`. These dialects all use only `database/sql`
+calls, so you may have success with other databases which are SQL-compatible
+with the above dialects.
 
 You can also provide your own custom `Dialect`. See `dialect.go` for the
 definition of the `Dialect` interface, and the optional `Locker` interface. Note
@@ -114,7 +114,7 @@ additional databases or feature enhancements / bug fixes.
 - [x] PostgreSQL (database/sql driver only, see [adlio/pgxschema](https://github.com/adlio/pgxschema) if you use `jack/pgx`)
 - [x] SQLite (thanks [kalafut](https://github.com/kalafut)!)
 - [x] MySQL / MariaDB
-- [ ] SQL Server (open a Pull Request)
+- [x] SQL Server
 - [ ] CockroachDB, Redshift, Snowflake, etc (open a Pull Request)
 
 ## Package Opinions
@@ -174,11 +174,18 @@ there's a good chance a different schema migration tool is more appropriate.
 - [x] Enhancements and documentation to facilitate asset embedding via go:embed
 - [ ] Add a `Validate()` method to allow checking migration names for
       consistency and to detect problematic changes in the migrations list.
-- [ ] SQL Server support
+- [x] SQL Server support
+- [ ] SQL Server support for the Locker interface to protect against simultaneous
+      migrations from clusters of servers.
 
 ## Version History
 
-### 1.2.3 - Dec10, 2021
+### 1.3.0 - Mar 25, 2022
+
+- Basic SQL Server support (no locking, not recommended for use in clusters)
+- Improved support for running tests on ARM64 machines (M1 Macs)
+
+### 1.2.3 - Dec 10, 2021
 
 - BUGFIX: Restore the ability to chain NewMigrator().Apply
 

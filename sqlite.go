@@ -22,7 +22,7 @@ func (s sqliteDialect) CreateMigrationsTable(ctx context.Context, tx Queryer, ta
 			id TEXT NOT NULL,
 			checksum TEXT NOT NULL DEFAULT '',
 			execution_time_in_millis INTEGER NOT NULL DEFAULT 0,
-			applied_at DATETIME
+			applied_at DATETIME NOT NULL
 		)`, tableName)
 	_, err := tx.ExecContext(ctx, query)
 	return err
