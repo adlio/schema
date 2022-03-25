@@ -69,7 +69,7 @@ func TestMySQLTimeScanner(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		assertZonesMatch(t, time.Now(), v.Value)
+		assertZonesMatch(t, time.Date(2021, 1, 1, 18, 19, 20, 0, time.Local), v.Value)
 		if expected.Unix() != v.Value.Unix() {
 			t.Errorf("Expected %s, got %s", expected.Format(time.RFC3339), v.Value.Format(time.RFC3339))
 		}
