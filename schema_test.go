@@ -55,9 +55,10 @@ var TestDBs map[string]*TestDB = map[string]*TestDB{
 		DockerTag:  "latest",
 	},
 	"mssql:latest": {
-		Dialect:    MSSQL,
-		Driver:     MSSQLDriverName,
-		DockerRepo: "mcr.microsoft.com/mssql/server",
-		DockerTag:  "2019-latest",
+		Dialect:      MSSQL,
+		Driver:       MSSQLDriverName,
+		DockerRepo:   "mcr.microsoft.com/mssql/server",
+		DockerTag:    "2019-latest",
+		SkippedArchs: []string{"arm64"},
 	},
 }
