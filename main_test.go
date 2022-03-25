@@ -34,7 +34,9 @@ func TestMain(m *testing.M) {
 		testDB := TestDBs[name]
 		wg.Add(1)
 		go func() {
-			testDB.Init(pool)
+			if testDB.IsRunnable() {
+				testDB.Init(pool)
+			}
 			wg.Done()
 		}()
 	}
