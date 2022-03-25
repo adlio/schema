@@ -53,7 +53,7 @@ func (s mssqlDialect) CreateMigrationsTable(ctx context.Context, tx Queryer, tab
 				id VARCHAR(255) NOT NULL,
 				checksum VARCHAR(32) NOT NULL DEFAULT '',
 				execution_time_in_millis INTEGER NOT NULL DEFAULT 0,
-				applied_at DATETIMEOFFSET
+				applied_at DATETIMEOFFSET NOT NULL
 			)
 	`, unquotedTableName, tableName)
 	_, err := tx.ExecContext(ctx, query)
