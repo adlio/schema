@@ -25,10 +25,11 @@ const (
 	PostgresDriverName = "postgres"
 	SQLiteDriverName   = "sqlite3"
 	MySQLDriverName    = "mysql"
+	MSSQLDriverName    = "sqlserver"
 )
 
 // TestDBs holds all of the specific database instances against which tests
-// will run. The connectDB test helper refere ces the keys of this map, and
+// will run. The connectDB test helper references the keys of this map, and
 // the withEachDB helper runs tests against every database defined here.
 var TestDBs map[string]*TestDB = map[string]*TestDB{
 	"postgres:latest": {
@@ -52,5 +53,11 @@ var TestDBs map[string]*TestDB = map[string]*TestDB{
 		Driver:     MySQLDriverName,
 		DockerRepo: "mariadb",
 		DockerTag:  "latest",
+	},
+	"mssql:latest": {
+		Dialect:    MSSQL,
+		Driver:     MSSQLDriverName,
+		DockerRepo: "mcr.microsoft.com/mssql/server",
+		DockerTag:  "2019-latest",
 	},
 }
