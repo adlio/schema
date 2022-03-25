@@ -43,11 +43,10 @@ var TestDBs map[string]*TestDB = map[string]*TestDB{
 		Driver:  SQLiteDriverName,
 	},
 	"mysql:latest": {
-		Dialect:      MySQL,
-		Driver:       MySQLDriverName,
-		DockerRepo:   "mysql",
-		DockerTag:    "latest",
-		SkippedArchs: []string{"arm"},
+		Dialect:    MySQL,
+		Driver:     MySQLDriverName,
+		DockerRepo: "mysql/mysql-server",
+		DockerTag:  "latest",
 	},
 	"mariadb:latest": {
 		Dialect:    MySQL,
