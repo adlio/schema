@@ -180,6 +180,10 @@ there's a good chance a different schema migration tool is more appropriate.
 
 ## Version History
 
+### 1.3.3 - Jun 19, 2022
+
+- Update downstream dependencies of ory/dockertest due to security issues.
+
 ### 1.3.0 - Mar 25, 2022
 
 - Basic SQL Server support (no locking, not recommended for use in clusters)
