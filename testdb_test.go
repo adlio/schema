@@ -9,8 +9,8 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/ory/dockertest"
-	"github.com/ory/dockertest/docker"
+	"github.com/ory/dockertest/v3"
+	"github.com/ory/dockertest/v3/docker"
 )
 
 // TestDB represents a specific database instance against which we would like

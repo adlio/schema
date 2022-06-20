@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/go-sql-driver/mysql"
-	"github.com/ory/dockertest"
+	"github.com/ory/dockertest/v3"
 )
 
 // TestMain replaces the normal test runner for this package. It connects to
