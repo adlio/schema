@@ -1,0 +1,45 @@
+# Golang CircleCI 2.0 configuration file
+#
+# Check https://circleci.com/docs/2.0/language-go/ for more details
+version: 2
+jobs:
+  golangci-lint:
+    docker:
+      - image: circleci/golang:latest
+    steps:
+      - checkout
+      - run:
+          # https://golangci-lint.run/usage/install/
+          name: Install golangci-lint
+          # Note: It's likely the below URL's "master" will change to "main" someday.
+          # The version of golangci-lint being used can be changed with the vN.N.N at the end of this URL.
+          command: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b ~/bin v1.42.0
+
+      - run:
+          name: Run Go Linters
+          command: ~/bin/golangci-lint run . --timeout 2m
+
+  go-build-and-test:
+    machine:
+      image: ubuntu-2004:202107-02
+    steps:
+      - checkout
+      - run:
+          name: Fetch Dependencies
+          command: go get -t .
+      - run:
+          name: Execute Go Build
+          command: go build .
+      - run:
+          name: Execute Go Tests
+          command: go test -race -coverprofile=coverage.txt -covermode=atomic
+      - run:
+          name: Upload Code Coverage
+          command: bash <(curl -s https://codecov.io/bash)
+
+workflows:
+  version: 2
+  build:
+    jobs:
+      - golangci-lint
+      - go-build-and-test
