@@ -21,7 +21,7 @@ jobs:
 
   go-build-and-test:
     machine:
-      image: cimg/go:1.18.3
+      image: ubuntu-2204:2022.04.2
     steps:
       - checkout
       - run:
