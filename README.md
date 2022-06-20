@@ -4,7 +4,7 @@ An embeddable library for applying changes to your Go application's
 `database/sql` schema.
 
 [![go.dev reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=for-the-badge)](https://pkg.go.dev/github.com/adlio/schema)
-[![Travis Build Status](https://img.shields.io/travis/com/adlio/schema/main?style=for-the-badge)](https://travis-ci.com/github/adlio/schema)
+![CircleCI Build Status](https://img.shields.io/circleci/build/github/adlio/schema?style=for-the-badge)
 [![Go Report Card](https://goreportcard.com/badge/github.com/adlio/schema?style=for-the-badge)](https://goreportcard.com/report/github.com/adlio/schema)
 [![Code Coverage](https://img.shields.io/codecov/c/github/adlio/schema?style=for-the-badge)](https://codecov.io/gh/adlio/schema)
 
