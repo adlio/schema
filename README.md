@@ -4,7 +4,7 @@ An embeddable library for applying changes to your Go application's
 `database/sql` schema.
 
 [![go.dev reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=for-the-badge)](https://pkg.go.dev/github.com/adlio/schema)
-[![Travis Build Status](https://img.shields.io/travis/com/adlio/schema/main?style=for-the-badge)](https://travis-ci.com/github/adlio/schema)
+[![CircleCI Build Status](https://img.shields.io/circleci/build/github/adlio/schema?style=for-the-badge)](https://dl.circleci.com/status-badge/redirect/gh/adlio/schema/tree/main)
 [![Go Report Card](https://goreportcard.com/badge/github.com/adlio/schema?style=for-the-badge)](https://goreportcard.com/report/github.com/adlio/schema)
 [![Code Coverage](https://img.shields.io/codecov/c/github/adlio/schema?style=for-the-badge)](https://codecov.io/gh/adlio/schema)
 
@@ -179,6 +179,10 @@ there's a good chance a different schema migration tool is more appropriate.
       migrations from clusters of servers.
 
 ## Version History
+
+### 1.3.3 - Jun 19, 2022
+
+- Update downstream dependencies of ory/dockertest due to security issues.
 
 ### 1.3.0 - Mar 25, 2022
 
