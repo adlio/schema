@@ -64,7 +64,6 @@ func (m mysqlDialect) InsertAppliedMigration(ctx context.Context, tx Queryer, ta
 }
 
 // GetAppliedMigrations retrieves all data from the migrations tracking table
-//
 func (m mysqlDialect) GetAppliedMigrations(ctx context.Context, tx Queryer, tableName string) (migrations []*AppliedMigration, err error) {
 	migrations = make([]*AppliedMigration, 0)
 
@@ -96,7 +95,6 @@ func (m mysqlDialect) GetAppliedMigrations(ctx context.Context, tx Queryer, tabl
 
 // QuotedTableName returns the string value of the name of the migration
 // tracking table after it has been quoted for MySQL
-//
 func (m mysqlDialect) QuotedTableName(schemaName, tableName string) string {
 	if schemaName == "" {
 		return m.quotedIdent(tableName)

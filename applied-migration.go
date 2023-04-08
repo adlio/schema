@@ -25,7 +25,6 @@ type AppliedMigration struct {
 
 // GetAppliedMigrations retrieves all already-applied migrations in a map keyed
 // by the migration IDs
-//
 func (m Migrator) GetAppliedMigrations(db Queryer) (applied map[string]*AppliedMigration, err error) {
 	applied = make(map[string]*AppliedMigration)
 

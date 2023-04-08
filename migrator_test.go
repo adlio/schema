@@ -58,7 +58,6 @@ func TestLockAndUnlock(t *testing.T) {
 // lexical order rather than the order they were provided in the slice. This is
 // also the primary test to assert that the data in the tracking table is
 // all correct.
-//
 func TestApplyInLexicalOrder(t *testing.T) {
 	withEachTestDB(t, func(t *testing.T, tdb *TestDB) {
 
@@ -117,7 +116,6 @@ func TestApplyInLexicalOrder(t *testing.T) {
 // TestFailedMigration ensures that a migration with a syntax error triggers
 // an expected error when Apply() is run. This test is run on every dialect
 // and every test database instance
-//
 func TestFailedMigration(t *testing.T) {
 	withEachTestDB(t, func(t *testing.T, tdb *TestDB) {
 
@@ -154,7 +152,6 @@ func TestFailedMigration(t *testing.T) {
 // connections to each test database and attempts to call .Apply() on them all
 // concurrently. The migrations include an INSERT statement, which allows us
 // to count to ensure that each unique migration was only run once.
-//
 func TestSimultaneousApply(t *testing.T) {
 	concurrency := 4
 	dataTable := fmt.Sprintf("data%d", rand.Int()) // #nosec we don't need cryptographic security here
@@ -278,7 +275,6 @@ func TestMultiSchemaSupport(t *testing.T) {
 
 // TestRunFailure ensures that a low-level connection or query-related failure
 // triggers an expected error.
-//
 func TestRunFailure(t *testing.T) {
 	bq := BadQueryer{}
 	m := makeTestMigrator()

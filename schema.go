@@ -34,7 +34,6 @@ type Queryer interface {
 }
 
 // Transactor defines the interface for the Begin method from the *sql.DB
-//
 type Transactor interface {
 	BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error)
 }

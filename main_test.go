@@ -17,7 +17,6 @@ import (
 // Docker running on the local machine and launches testing database
 // containers to which we then connect and store the connection in a package
 // global variable
-//
 func TestMain(m *testing.M) {
 	pool, err := dockertest.NewPool("")
 	if err != nil {
