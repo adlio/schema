@@ -14,8 +14,7 @@ import (
 //
 // Example usage:
 //
-//     FSMigrations(embeddedFS, "my-migrations/*.sql")
-//
+//	FSMigrations(embeddedFS, "my-migrations/*.sql")
 func FSMigrations(filesystem fs.FS, glob string) (migrations []*Migration, err error) {
 	migrations = make([]*Migration, 0)
 

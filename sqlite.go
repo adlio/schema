@@ -44,7 +44,6 @@ func (s *sqliteDialect) InsertAppliedMigration(ctx context.Context, tx Queryer, 
 }
 
 // GetAppliedMigrations retrieves all data from the migrations tracking table
-//
 func (s sqliteDialect) GetAppliedMigrations(ctx context.Context, tx Queryer, tableName string) (migrations []*AppliedMigration, err error) {
 	migrations = make([]*AppliedMigration, 0)
 

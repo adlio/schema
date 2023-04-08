@@ -11,7 +11,6 @@ import (
 
 // MigrationIDFromFilename removes directory paths and extensions
 // from the filename to make a friendlier Migration ID
-//
 func MigrationIDFromFilename(filename string) string {
 	return strings.TrimSuffix(filepath.Base(filename), filepath.Ext(filename))
 }

@@ -9,7 +9,6 @@ type Option func(m Migrator) Migrator
 
 // WithDialect builds an Option which will set the supplied
 // dialect on a Migrator. Usage: NewMigrator(WithDialect(MySQL))
-//
 func WithDialect(dialect Dialect) Option {
 	return func(m Migrator) Migrator {
 		m.Dialect = dialect
@@ -23,7 +22,6 @@ func WithDialect(dialect Dialect) Option {
 // qualifier (for example, WithTableName("public", "schema_migrations") would
 // assign the table named "schema_migrations" in the the default "public"
 // schema for Postgres)
-//
 func WithTableName(names ...string) Option {
 	return func(m Migrator) Migrator {
 		switch len(names) {
@@ -57,7 +55,6 @@ type Logger interface {
 
 // WithLogger builds an Option which will set the supplied Logger
 // on a Migrator. Usage: NewMigrator(WithLogger(logrus.New()))
-//
 func WithLogger(logger Logger) Option {
 	return func(m Migrator) Migrator {
 		m.Logger = logger

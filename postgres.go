@@ -67,7 +67,6 @@ func (p postgresDialect) InsertAppliedMigration(ctx context.Context, tx Queryer,
 }
 
 // GetAppliedMigrations retrieves all data from the migrations tracking table
-//
 func (p postgresDialect) GetAppliedMigrations(ctx context.Context, tx Queryer, tableName string) (migrations []*AppliedMigration, err error) {
 	migrations = make([]*AppliedMigration, 0)
 
@@ -97,7 +96,6 @@ func (p postgresDialect) GetAppliedMigrations(ctx context.Context, tx Queryer, t
 
 // QuotedTableName returns the string value of the name of the migration
 // tracking table after it has been quoted for Postgres
-//
 func (p postgresDialect) QuotedTableName(schemaName, tableName string) string {
 	if schemaName == "" {
 		return p.QuotedIdent(tableName)
