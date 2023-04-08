@@ -18,6 +18,9 @@ import (
 // containers to which we then connect and store the connection in a package
 // global variable
 func TestMain(m *testing.M) {
+
+	log.Printf("Running tests on GOARCH=%s", runtime.GOARCH)
+
 	pool, err := dockertest.NewPool("")
 	if err != nil {
 		log.Fatalf("Can't run schema tests. Docker is not running: %s", err)
