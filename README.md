@@ -180,6 +180,10 @@ there's a good chance a different schema migration tool is more appropriate.
 
 ## Version History
 
+### 1.3.4 - Apr 9, 2023
+
+- Update downstream dependencies to address vulnerabilities in test dependencies.
+
 ### 1.3.3 - Jun 19, 2022
 
 - Update downstream dependencies of ory/dockertest due to security issues.
