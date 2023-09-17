@@ -44,11 +44,9 @@ var MyMigrations embed.FS
 func main() {
    db, err := sql.Open(...) // Or however you get a *sql.DB
 
+   migrations, err := schema.FSMigrations(MyMigrations, "my-migrations/*.sql")
    migrator := schema.NewMigrator(schema.WithDialect(schema.MySQL))
-   err = migrator.Apply(
-      db,
-      schema.FSMigrations(MyMigrations, "my-migrations/*.sql"),
-   )
+   err = migrator.Apply(db, migrations)
 }
 ```
 
