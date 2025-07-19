@@ -178,7 +178,12 @@ there's a good chance a different schema migration tool is more appropriate.
 
 ## Version History
 
-### 1.3.5 - Jul 19, 2025
+### 1.3.8 - Jul 19, 2025
+
+- Update golang.org/x/crypto to v0.40.0 to address security vulnerabilities
+- Update golang.org/x/net to v0.42.0 to address security vulnerabilities
+
+### 1.3.7 - Jul 19, 2025
 
 - Add SQL Server support for the Locker interface using sp_getapplock/sp_releaseapplock
 - Fix SQL Server transaction handling for concurrent migrations
