@@ -33,26 +33,30 @@ func (s mssqlDialect) Lock(ctx context.Context, tx Queryer, tableName string) er
 // release it to avoid errors when the lock is not held.
 func (s mssqlDialect) Unlock(ctx context.Context, tx Queryer, tableName string) error {
 	lockID := s.advisoryLockID(tableName)
-	
+
 	// First check if we have the lock before trying to release it
 	checkQuery := fmt.Sprintf("SELECT APPLOCK_MODE('public', '%d', 'Session');", lockID)
 	rows, err := tx.QueryContext(ctx, checkQuery)
 	if err != nil {
-		// If there was an error checking, just return success
-		return nil
+		// If there was an error checking, log it but continue to try releasing
+		// This is to ensure we don't leave locks hanging
+		return fmt.Errorf("error checking lock status: %w", err)
 	}
 	defer rows.Close()
-	
+
 	// Check if we have the lock
 	var lockMode string
 	if rows.Next() {
 		err = rows.Scan(&lockMode)
-		if err != nil || lockMode == "NoLock" {
-			// If we don't have the lock, just return success
+		if err != nil {
+			return fmt.Errorf("error scanning lock mode: %w", err)
+		}
+		if lockMode == "NoLock" {
+			// If lockMode is "NoLock", we don't have a lock to release
 			return nil
 		}
 	}
-	
+
 	// Release the application lock
 	query := fmt.Sprintf("EXEC sp_releaseapplock @Resource = '%d', @LockOwner = 'Session';", lockID)
 	_, err = tx.ExecContext(ctx, query)
@@ -65,7 +69,6 @@ func (s mssqlDialect) Unlock(ctx context.Context, tx Queryer, tableName string) 
 func (s mssqlDialect) advisoryLockID(tableName string) uint32 {
 	return crc32.ChecksumIEEE([]byte(tableName)) ^ mssqlAdvisoryLockSalt
 }
-
 
 func (s mssqlDialect) QuotedTableName(schemaName, tableName string) string {
 	if schemaName == "" {
@@ -111,7 +114,7 @@ func (s mssqlDialect) CreateMigrationsTable(ctx context.Context, tx Queryer, tab
 			)
 	`, unquotedTableName, tableName)
 	_, err := tx.ExecContext(ctx, query)
-	
+
 	// Handle concurrent table creation: ignore "object already exists" errors
 	if err != nil && strings.Contains(err.Error(), "There is already an object named") {
 		return nil
