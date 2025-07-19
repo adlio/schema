@@ -173,10 +173,15 @@ there's a good chance a different schema migration tool is more appropriate.
 - [ ] Add a `Validate()` method to allow checking migration names for
       consistency and to detect problematic changes in the migrations list.
 - [x] SQL Server support
-- [ ] SQL Server support for the Locker interface to protect against simultaneous
+- [x] SQL Server support for the Locker interface to protect against simultaneous
       migrations from clusters of servers.
 
 ## Version History
+
+### 1.3.5 - Jul 19, 2025
+
+- Add SQL Server support for the Locker interface using sp_getapplock/sp_releaseapplock
+- Fix SQL Server transaction handling for concurrent migrations
 
 ### 1.3.4 - Apr 9, 2023
 
