@@ -1,8 +1,6 @@
 module github.com/adlio/schema
 
-go 1.23.0
-
-toolchain go1.23.4
+go 1.21
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.0
