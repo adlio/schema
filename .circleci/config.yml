@@ -25,14 +25,25 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Install Go 1.21
+          command: |
+            sudo rm -rf /usr/local/go
+            wget https://go.dev/dl/go1.21.13.linux-amd64.tar.gz
+            sudo tar -C /usr/local -xzf go1.21.13.linux-amd64.tar.gz
+            echo 'export PATH=/usr/local/go/bin:$PATH' >> ~/.bashrc
+            source ~/.bashrc
+      - run:
+          name: Verify Go Version
+          command: /usr/local/go/bin/go version
+      - run:
           name: Fetch Dependencies
-          command: go get -t .
+          command: /usr/local/go/bin/go get -t .
       - run:
           name: Execute Go Build
-          command: go build .
+          command: /usr/local/go/bin/go build .
       - run:
           name: Execute Go Tests
-          command: go test -race -coverprofile=coverage.txt -covermode=atomic
+          command: /usr/local/go/bin/go test -race -coverprofile=coverage.txt -covermode=atomic
       - run:
           name: Upload Code Coverage
           command: bash <(curl -s https://codecov.io/bash)

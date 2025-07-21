@@ -178,6 +178,11 @@ there's a good chance a different schema migration tool is more appropriate.
 
 ## Version History
 
+### 1.3.9 - Jul 21, 2025
+
+- Update Go version requirement to 1.21 to resolve CircleCI build issues with slices package dependency
+- Update CircleCI configuration to use Go 1.21
+
 ### 1.3.4 - Apr 9, 2023
 
 - Update downstream dependencies to address vulnerabilities in test dependencies.
