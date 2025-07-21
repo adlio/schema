@@ -3,7 +3,7 @@ package schema
 import (
 	"testing"
 
-	"github.com/DATA-DOG/go-sqlmock"
+	sqlmock "github.com/DATA-DOG/go-sqlmock"
 )
 
 func TestGetAppliedMigrations(t *testing.T) {
