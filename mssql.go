@@ -34,33 +34,41 @@ func (s mssqlDialect) Lock(ctx context.Context, tx Queryer, tableName string) er
 func (s mssqlDialect) Unlock(ctx context.Context, tx Queryer, tableName string) error {
 	lockID := s.advisoryLockID(tableName)
 
-	// First check if we have the lock before trying to release it
-	checkQuery := fmt.Sprintf("SELECT APPLOCK_MODE('public', '%d', 'Session');", lockID)
-	rows, err := tx.QueryContext(ctx, checkQuery)
+	// Check if we have the lock before trying to release it
+	lockMode, err := s.getLockMode(ctx, tx, lockID)
 	if err != nil {
-		// If there was an error checking, log it but continue to try releasing
-		// This is to ensure we don't leave locks hanging
-		return fmt.Errorf("error checking lock status: %w", err)
+		return err
 	}
-	defer rows.Close()
 
-	// Check if we have the lock
-	var lockMode string
-	if rows.Next() {
-		err = rows.Scan(&lockMode)
-		if err != nil {
-			return fmt.Errorf("error scanning lock mode: %w", err)
-		}
-		if lockMode == "NoLock" {
-			// If lockMode is "NoLock", we don't have a lock to release
-			return nil
-		}
+	// If we don't have a lock, nothing to release
+	if lockMode == "NoLock" {
+		return nil
 	}
 
 	// Release the application lock
 	query := fmt.Sprintf("EXEC sp_releaseapplock @Resource = '%d', @LockOwner = 'Session';", lockID)
 	_, err = tx.ExecContext(ctx, query)
 	return err
+}
+
+// getLockMode checks if we currently hold a lock and returns the lock mode.
+// This is extracted to a helper to ensure rows are properly closed before
+// any subsequent queries on the same connection.
+func (s mssqlDialect) getLockMode(ctx context.Context, tx Queryer, lockID uint32) (string, error) {
+	query := fmt.Sprintf("SELECT APPLOCK_MODE('public', '%d', 'Session');", lockID)
+	rows, err := tx.QueryContext(ctx, query)
+	if err != nil {
+		return "", fmt.Errorf("error checking lock status: %w", err)
+	}
+	defer rows.Close()
+
+	var lockMode string
+	if rows.Next() {
+		if err := rows.Scan(&lockMode); err != nil {
+			return "", fmt.Errorf("error scanning lock mode: %w", err)
+		}
+	}
+	return lockMode, nil
 }
 
 // advisoryLockID generates a consistent integer ID for use with SQL Server's sp_getapplock

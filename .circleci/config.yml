@@ -5,7 +5,7 @@ version: 2.1
 jobs:
   golangci-lint:
     docker:
-      - image: cimg/go:1.18
+      - image: cimg/go:1.24
     steps:
       - checkout
       - run:
@@ -13,7 +13,7 @@ jobs:
           name: Install golangci-lint
           # Note: It's likely the below URL's "master" will change to "main" someday.
           # The version of golangci-lint being used can be changed with the vN.N.N at the end of this URL.
-          command: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b ~/bin v1.55.2
+          command: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b ~/bin v2.10.1
 
       - run:
           name: Run Go Linters
@@ -25,11 +25,11 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Install Go 1.21
+          name: Install Go 1.24
           command: |
             sudo rm -rf /usr/local/go
-            wget https://go.dev/dl/go1.21.13.linux-amd64.tar.gz
-            sudo tar -C /usr/local -xzf go1.21.13.linux-amd64.tar.gz
+            wget https://go.dev/dl/go1.24.0.linux-amd64.tar.gz
+            sudo tar -C /usr/local -xzf go1.24.0.linux-amd64.tar.gz
             echo 'export PATH=/usr/local/go/bin:$PATH' >> ~/.bashrc
             source ~/.bashrc
       - run:

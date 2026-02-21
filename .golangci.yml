@@ -1,28 +1,37 @@
+version: "2"
+
 run:
-  go: '1.21'
+  go: '1.24'
   timeout: 2m
 
 linters:
   enable:
     - errcheck
-    - gofmt
-    - goimports
-    - gosimple
     - govet
     - ineffassign
     - nilerr
     - staticcheck
-    - typecheck
     - unused
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters:
+          - errcheck
+          - unused
+      - linters:
+          - errcheck
+        text: "Error return value of .*.Close"
+      - linters:
+          - staticcheck
+        text: "ST1005:|SA1029:|QF1012:"
 
-linters-settings:
-  gofmt:
-    simplify: true
-  goimports:
-    local-prefixes: github.com/adlio/schema
-
-issues:
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - errcheck
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    gofmt:
+      simplify: true
+    goimports:
+      local-prefixes:
+        - github.com/adlio/schema

@@ -3,7 +3,6 @@ package schema
 import (
 	"database/sql"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"runtime"
@@ -118,7 +117,7 @@ func (c *TestDB) Path() string {
 	switch c.Driver {
 	case SQLiteDriverName:
 		if c.path == "" {
-			tmpF, _ := ioutil.TempFile("", "schema.*.sqlite3")
+			tmpF, _ := os.CreateTemp("", "schema.*.sqlite3")
 			c.path = tmpF.Name()
 		}
 		return c.path
@@ -143,7 +142,7 @@ func (c *TestDB) DSN() string {
 		}
 		return fmt.Sprintf("%s:%s@(localhost:%s)/%s?multiStatements=true", c.Username(), c.Password(), c.Port(), c.DatabaseName())
 	case MSSQLDriverName:
-		return fmt.Sprintf("sqlserver://%s:%s@localhost:%s/?database=%s", c.Username(), c.Password(), c.Port(), c.DatabaseName())
+		return fmt.Sprintf("sqlserver://%s:%s@localhost:%s/?database=%s&encrypt=disable", c.Username(), c.Password(), c.Port(), c.DatabaseName())
 	}
 	// TODO Return error
 	return "NoDSN"
