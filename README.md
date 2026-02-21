@@ -1,12 +1,13 @@
 # Schema - Database Migrations for Go
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/adlio/schema.svg)](https://pkg.go.dev/github.com/adlio/schema)
+[![CI](https://github.com/adlio/schema/actions/workflows/ci.yml/badge.svg)](https://github.com/adlio/schema/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/adlio/schema/graph/badge.svg)](https://codecov.io/gh/adlio/schema)
+[![Go Report Card](https://goreportcard.com/badge/github.com/adlio/schema)](https://goreportcard.com/report/github.com/adlio/schema)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+
 An embeddable library for applying changes to your Go application's
 `database/sql` schema.
-
-[![go.dev reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=for-the-badge)](https://pkg.go.dev/github.com/adlio/schema)
-[![CircleCI Build Status](https://img.shields.io/circleci/build/github/adlio/schema?style=for-the-badge)](https://dl.circleci.com/status-badge/redirect/gh/adlio/schema/tree/main)
-[![Go Report Card](https://goreportcard.com/badge/github.com/adlio/schema?style=for-the-badge)](https://goreportcard.com/report/github.com/adlio/schema)
-[![Code Coverage](https://img.shields.io/codecov/c/github/adlio/schema?style=for-the-badge)](https://codecov.io/gh/adlio/schema)
 
 ## Features
 
@@ -177,6 +178,15 @@ there's a good chance a different schema migration tool is more appropriate.
       migrations from clusters of servers.
 
 ## Version History
+
+### 1.4.0 - Feb 21, 2026
+
+- **Breaking:** Go 1.24+ now required (was 1.22)
+- **Breaking:** MSSQL driver changed from `denisenkom/go-mssqldb` to `microsoft/go-mssqldb`
+- Update all dependencies to latest versions
+- Fix data race in MSSQL Unlock function
+- Migrate CI from CircleCI to GitHub Actions
+- Add automated release workflow
 
 ### 1.3.9 - Jul 21, 2025
 
