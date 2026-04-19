@@ -3,15 +3,20 @@ name: Release
 on:
   push:
     tags:
-      - "v[0-9]+.[0-9]+.[0-9]+*"
+      - "v*.*.*"
 
 permissions:
   contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
@@ -20,28 +25,32 @@ jobs:
       - name: Generate release notes
         id: notes
         run: |
-          # Get the previous tag
-          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          prev_tag=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || true)
 
-          if [ -n "$PREV_TAG" ]; then
-            echo "Generating changelog from $PREV_TAG to $GITHUB_REF_NAME"
-            NOTES=$(git log --pretty=format:"- %s" "$PREV_TAG"..HEAD)
+          if [ -n "$prev_tag" ]; then
+            echo "Generating changelog from $prev_tag to $GITHUB_REF_NAME"
+            notes=$(git log --pretty=format:'- %s' "$prev_tag"..HEAD)
           else
             echo "No previous tag found, using all commits"
-            NOTES=$(git log --pretty=format:"- %s")
+            notes=$(git log --pretty=format:'- %s')
           fi
 
           {
             echo "notes<<EOF"
-            echo "$NOTES"
+            echo "$notes"
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Create GitHub Release
-        run: |
-          gh release create "$GITHUB_REF_NAME" \
-            --title "$GITHUB_REF_NAME" \
-            --notes "${{ steps.notes.outputs.notes }}" \
-            --generate-notes
+      - name: Create or update GitHub release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release edit "$GITHUB_REF_NAME" \
+              --title "$GITHUB_REF_NAME" \
+              --notes "${{ steps.notes.outputs.notes }}"
+          else
+            gh release create "$GITHUB_REF_NAME" \
+              --title "$GITHUB_REF_NAME" \
+              --notes "${{ steps.notes.outputs.notes }}"
+          fi
