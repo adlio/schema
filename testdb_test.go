@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -8,8 +9,8 @@ import (
 	"runtime"
 	"testing"
 
-	dockertest "github.com/ory/dockertest/v3"
-	"github.com/ory/dockertest/v3/docker"
+	containertypes "github.com/moby/moby/api/types/container"
+	dockertest "github.com/ory/dockertest/v4"
 )
 
 // TestDB represents a specific database instance against which we would like
@@ -19,7 +20,7 @@ type TestDB struct {
 	Driver       string
 	DockerRepo   string
 	DockerTag    string
-	Resource     *dockertest.Resource
+	Resource     dockertest.ClosableResource
 	SkippedArchs []string
 	path         string
 }
@@ -54,6 +55,10 @@ func (c *TestDB) DatabaseName() string {
 // Port asks Docker for the host-side port we can use to connect to the
 // relevant container's database port.
 func (c *TestDB) Port() string {
+	if c.Resource == nil {
+		return ""
+	}
+
 	switch c.Driver {
 	case MySQLDriverName:
 		return c.Resource.GetPort("3306/tcp")
@@ -152,7 +157,7 @@ func (c *TestDB) DSN() string {
 // instances, this function triggers the `docker run` call. For SQLite-based
 // test instances, this creates the data file. In all cases, we verify that
 // the database is connectable via a test connection.
-func (c *TestDB) Init(pool *dockertest.Pool) {
+func (c *TestDB) Init(ctx context.Context, pool dockertest.Pool) {
 	var err error
 
 	if c.IsDocker() {
@@ -161,30 +166,22 @@ func (c *TestDB) Init(pool *dockertest.Pool) {
 		log.Printf("Starting docker container %s:%s\n", c.DockerRepo, c.DockerTag)
 
 		// The container is started with AutoRemove: true, and a restart policy to
-		// not restart
-		c.Resource, err = pool.RunWithOptions(&dockertest.RunOptions{
-			Repository: c.DockerRepo,
-			Tag:        c.DockerTag,
-			Env:        c.DockerEnvars(),
-		}, func(config *docker.HostConfig) {
-			config.AutoRemove = true
-			config.RestartPolicy = docker.RestartPolicy{
-				Name: "no",
-			}
-		})
-
+		// not restart.
+		c.Resource, err = pool.Run(ctx,
+			c.DockerRepo,
+			dockertest.WithTag(c.DockerTag),
+			dockertest.WithEnv(c.DockerEnvars()),
+			dockertest.WithoutReuse(),
+			dockertest.WithHostConfig(func(config *containertypes.HostConfig) {
+				config.RestartPolicy = containertypes.RestartPolicy{Name: "no"}
+			}),
+		)
 		if err != nil {
 			log.Fatalf("Could not start container %s:%s: %s", c.DockerRepo, c.DockerTag, err)
 		}
-
-		// Even if everything goes OK, kill off the container after n seconds
-		_ = c.Resource.Expire(120)
 	}
 
-	// Regardless of whether the DB is docker-based on not, we use the pool's
-	// exponential backoff helper to wait until connections succeed for this
-	// database
-	err = pool.Retry(func() error {
+	err = pool.Retry(ctx, 0, func() error {
 		testConn, err := sql.Open(c.Driver, c.DSN())
 		if err != nil {
 			return err
@@ -196,9 +193,8 @@ func (c *TestDB) Init(pool *dockertest.Pool) {
 	})
 	if err != nil {
 		log.Fatalf("Could not connect to %s: %s", c.DSN(), err)
-	} else {
-		log.Printf("Successfully connected to %s", c.DSN())
 	}
+	log.Printf("Successfully connected to %s", c.DSN())
 }
 
 // Connect creates an additional *database/sql.DB connection for a particular
@@ -214,7 +210,7 @@ func (c *TestDB) Connect(t *testing.T) *sql.DB {
 // Cleanup should be called after all tests with a database instance are
 // complete. For dockertest-based tests, it deletes the docker containers.
 // For SQLite tests, it deletes the database file from the temp directory.
-func (c *TestDB) Cleanup(pool *dockertest.Pool) {
+func (c *TestDB) Cleanup(ctx context.Context) {
 	var err error
 
 	switch {
@@ -226,7 +222,7 @@ func (c *TestDB) Cleanup(pool *dockertest.Pool) {
 		}
 
 	case c.IsDocker() && c.Resource != nil:
-		err = pool.Purge(c.Resource)
+		err = c.Resource.Close(ctx)
 	}
 
 	if err != nil {
