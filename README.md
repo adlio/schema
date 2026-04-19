@@ -12,7 +12,7 @@ An embeddable library for applying changes to your Go application's
 ## Features
 
 - Cloud-friendly design tolerates embedded use in clusters
-- Supports migrations in embed.FS (requires go:embed in Go 1.16+)
+- Supports migrations in embed.FS via `go:embed`
 - [Depends only on Go standard library](https://pkg.go.dev/github.com/adlio/schema?tab=imports) (Note that all go.mod dependencies are used only in tests)
 - Unidirectional migrations (no "down" migration complexity)
 
@@ -30,9 +30,9 @@ The `[]*schema.Migration` can be created manually, but the package
 has some utility functions to make it easier to parse .sql files into structs
 with the filename as the `ID` and the file contents as the `Script`.
 
-## Using go:embed (requires Go 1.16+)
+## Using go:embed
 
-Go 1.16 added features to embed a directory of files into the binary as an
+Go's `embed` package lets you embed a directory of files into the binary as an
 embedded filesystem (`embed.FS`).
 
 Assuming you have a directory of SQL files called `my-migrations/` next to your
@@ -63,8 +63,8 @@ many processes is attempting to run migrations simultaneously.
 
 ## Using Inline Migration Structs
 
-If you're running in an earlier version of Go, Migration{} structs will need to
-be created manually:
+If you prefer not to use embedded migration files, `Migration{}` structs can be
+created manually:
 
 ```go
 db, err := sql.Open(...)
@@ -178,6 +178,12 @@ there's a good chance a different schema migration tool is more appropriate.
       migrations from clusters of servers.
 
 ## Version History
+
+### 1.5.0 - Apr 18, 2026
+
+- **Breaking:** Go 1.25.5+ is now required because the Docker-based test stack now depends on `ory/dockertest/v4`
+- Update Docker-based test dependencies to address security vulnerabilities by migrating to `ory/dockertest/v4`
+- Finalize GitHub Actions CI/release automation and improve automated release notes extraction from README version history
 
 ### 1.4.0 - Feb 21, 2026
 
