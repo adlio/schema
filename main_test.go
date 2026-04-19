@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -10,7 +11,7 @@ import (
 	"testing"
 
 	"github.com/go-sql-driver/mysql"
-	dockertest "github.com/ory/dockertest/v3"
+	dockertest "github.com/ory/dockertest/v4"
 )
 
 // TestMain replaces the normal test runner for this package. It connects to
@@ -18,10 +19,11 @@ import (
 // containers to which we then connect and store the connection in a package
 // global variable
 func TestMain(m *testing.M) {
+	ctx := context.Background()
 
 	log.Printf("Running tests on GOARCH=%s", runtime.GOARCH)
 
-	pool, err := dockertest.NewPool("")
+	pool, err := dockertest.NewPool(ctx, "")
 	if err != nil {
 		log.Fatalf("Can't run schema tests. Docker is not running: %s", err)
 	}
@@ -37,7 +39,7 @@ func TestMain(m *testing.M) {
 		wg.Add(1)
 		go func() {
 			if testDB.IsRunnable() {
-				testDB.Init(pool)
+				testDB.Init(ctx, pool)
 			}
 			wg.Done()
 		}()
@@ -53,7 +55,10 @@ func TestMain(m *testing.M) {
 	// Purge all the containers we created
 	// You can't defer this because os.Exit doesn't execute defers
 	for _, info := range TestDBs {
-		info.Cleanup(pool)
+		info.Cleanup(ctx)
+	}
+	if err := pool.Close(ctx); err != nil {
+		log.Fatalf("Could not close docker pool: %s", err)
 	}
 
 	os.Exit(code)
