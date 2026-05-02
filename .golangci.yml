@@ -1,9 +1,5 @@
 version: "2"
 
-run:
-  go: '1.24'
-  timeout: 2m
-
 linters:
   enable:
     - errcheck
