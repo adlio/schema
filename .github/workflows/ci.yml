@@ -6,56 +6,65 @@ on:
   pull_request:
     branches: [main]
 
-permissions:
-  contents: read
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
-          cache-dependency-path: go.sum
-      - name: golangci-lint
+
+      - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v7
         with:
-          version: v2.10.1
+          version: v2.11.4
+          args: --timeout 2m
+
+  vet:
+    name: Vet
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Run go vet
+        run: go vet ./...
 
   build:
     name: Build
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
-          cache-dependency-path: go.sum
-      - name: Build package
+
+      - name: Build
         run: go build ./...
 
   test:
     name: Test + Coverage
     runs-on: ubuntu-latest
-    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
-          cache-dependency-path: go.sum
+
       - name: Run tests with coverage
-        run: go test -race -coverprofile=coverage.out -covermode=atomic ./...
+        run: go test -race -coverprofile=coverage.txt -covermode=atomic ./...
+
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
-          files: coverage.out
-          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage.txt
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
