@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-07-04
+
+### Changed
+
+- **Breaking:** Go 1.25.11+ is now required to address standard library security vulnerabilities
+- Update all test dependencies to latest versions, including database drivers and Docker-based test stack
+
 ## [1.5.0] - 2026-04-18
 
 ### Changed

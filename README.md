@@ -179,6 +179,11 @@ there's a good chance a different schema migration tool is more appropriate.
 
 ## Version History
 
+### 1.5.1 - Jul 4, 2026
+
+- **Breaking:** Go 1.25.11+ is now required to address standard library security vulnerabilities
+- Update all test dependencies to latest versions
+
 ### 1.5.0 - Apr 18, 2026
 
 - **Breaking:** Go 1.25.5+ is now required because the Docker-based test stack now depends on `ory/dockertest/v4`
